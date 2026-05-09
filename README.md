@@ -16,7 +16,7 @@ And extract it in a location, in my case `C:\Users\Angel\Documents\ffmpeg-8.0.1-
 
 <br>
 
-So in the index.html file looke for `const ffmpeg = "C:\\Users\\Angel\\Documents\\ffmpeg-8.0.1-full_build\\bin\\ffmpeg.exe";` and replace it to were you extracted yours.
+So in the index.html file look for `const ffmpeg = "C:\\Users\\Angel\\Documents\\ffmpeg-8.0.1-full_build\\bin\\ffmpeg.exe";` and replace it to were you extracted yours.
 
 <br>
 
