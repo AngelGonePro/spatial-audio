@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Atmos 7.1 Pro Engine</title>
+
+<style>
+body { background:#0d0d0d; color:#e0e0e0; font-family:Segoe UI; padding:30px; }
+h1 { color:#00c8ff; }
+
+#dropzone {
+  border:2px dashed #00c8ff55;
+  padding:40px;
+  text-align:center;
+  border-radius:12px;
+  cursor:pointer;
+}
+
+.file-info { margin-top:10px; color:#aaa; }
+
+button {
+  margin-top:15px;
+  width:100%;
+  padding:12px;
+  background:#111;
+  border:1px solid #333;
+  color:#00c8ff;
+  cursor:pointer;
+}
+
+pre {
+  margin-top:15px;
+  background:#0a0a0a;
+  padding:12px;
+  color:#7fff7f;
+  white-space:pre-wrap;
+}
+
+.status { margin-top:10px; color:#ffcc00; }
+</style>
+</head>
+
+<body>
+
+<h1>🎧 ATMOS 7.1 PRO ENGINE</h1>
+
+<div id="dropzone">Drag & Drop Audio File</div>
+<input type="file" id="fileInput" hidden>
+
+<div class="file-info" id="fileInfo"></div>
+
+<button onclick="run()">RUN ATMOS PROCESS</button>
+
+<div class="status" id="status">Idle</div>
+
+<pre id="output"></pre>
+
+<script>
+let filePath = "";
+
+const dropzone = document.getElementById("dropzone");
+const fileInput = document.getElementById("fileInput");
+
+dropzone.onclick = () => fileInput.click();
+
+dropzone.addEventListener("dragover", e => e.preventDefault());
+
+dropzone.addEventListener("drop", e => {
+  e.preventDefault();
+  loadFile(e.dataTransfer.files[0]);
+});
+
+fileInput.addEventListener("change", e => {
+  loadFile(e.target.files[0]);
+});
+
+function loadFile(file) {
+  filePath = window.electronAPI.getPath(file);
+
+  document.getElementById("fileInfo").innerHTML =
+    "<b>File:</b> " + file.name + "<br>" +
+    "<b>Path:</b> " + filePath;
+}
+
+function run() {
+
+  const ffmpeg = "C:\\Users\\Angel\\Documents\\ffmpeg-8.0.1-full_build\\bin\\ffmpeg.exe";
+
+  const outPath = filePath.replace(/\.[^\.]+$/, "") + " - ATMOS-FINAL.flac";
+
+const filter = `
+[0:a]asplit=4[src1][src2][src3][src4];
+
+[src1][src2]amerge=inputs=2[ms_in];
+[ms_in]pan=stereo|
+FL=0.5*c0+0.5*c1|
+FR=0.5*c0-0.5*c1[ms];
+[ms]asplit=2[mid][side];
+[mid]volume=0.90[mid_v];
+[side]volume=1.40[side_v];
+[mid_v][side_v]amerge=inputs=2[ms_out];
+[ms_out]pan=stereo|
+FL=c0+c1|
+FR=c0-c1[ms_decoded];
+
+[src3]pan=stereo|
+FL=0.70*FC|
+FR=0.70*FC[vocal];
+[vocal]volume=0.65[vocal_v];
+
+[src4]pan=stereo|
+FL=0.65*SL+0.65*BL-0.35*SR-0.35*BR|
+FR=0.65*SR+0.65*BR-0.35*SL-0.35*BL[surr];
+[surr]volume=0.75[surr_v];
+
+[ms_decoded][vocal_v][surr_v]amix=inputs=3:weights=1 1 1[mixed];
+[mixed]extrastereo=m=1.2[wide];
+[wide]alimiter=level_in=1:level_out=1:limit=0.98:attack=3:release=40:level=disabled[out]
+`;
+
+const args = [
+    "-i", filePath,
+    "-filter_complex", filter,
+    "-map", "[out]",
+    "-map", "0:v?",
+    "-map_metadata", "0",
+    "-map_metadata:s:a:0", "0:s:a:0",
+    "-c:a", "flac",
+    "-c:v", "copy",
+    "-ar", "44100",
+    "-sample_fmt", "s16",
+    outPath
+];
+
+  document.getElementById("status").textContent = "Processing...";
+
+  window.electronAPI.runFFmpeg({
+    ffmpeg,
+    args
+  }).then(res => {
+
+    console.log(res);
+
+    if (res.code !== 0) {
+      document.getElementById("status").textContent = "❌ Failed";
+      document.getElementById("output").textContent = res.stderr;
+    } else {
+      document.getElementById("status").textContent = "✅ Done";
+      document.getElementById("output").textContent = "OUTPUT:\n" + outPath;
+    }
+
+  });
+}
