@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Atmos 7.1 Pro Engine</title>
+
+<style>
+body { background:#0d0d0d; color:#e0e0e0; font-family:Segoe UI; padding:30px; }
+h1 { color:#00c8ff; }
+
+#dropzone {
+  border:2px dashed #00c8ff55;
+  padding:40px;
+  text-align:center;
+  border-radius:12px;
+  cursor:pointer;
+}
+
+.file-info { margin-top:10px; color:#aaa; }
+
+button {
+  margin-top:15px;
+  width:100%;
+  padding:12px;
+  background:#111;
+  border:1px solid #333;
+  color:#00c8ff;
+  cursor:pointer;
+}
+
+pre {
+  margin-top:15px;
+  background:#0a0a0a;
+  padding:12px;
+  color:#7fff7f;
+  white-space:pre-wrap;
+}
+
+.status { margin-top:10px; color:#ffcc00; }
+</style>
+</head>
+
+<body>
+
+<h1>🎧 ATMOS 7.1 PRO ENGINE</h1>
+
+<div id="dropzone">Drag & Drop Audio File</div>
+<input type="file" id="fileInput" hidden>
+
+<div class="file-info" id="fileInfo"></div>
+
+<button onclick="run()">RUN ATMOS PROCESS</button>
+
+<div class="status" id="status">Idle</div>
+
+<pre id="output"></pre>
+
+<script>
+let filePath = "";
+
+const dropzone = document.getElementById("dropzone");
+const fileInput = document.getElementById("fileInput");
+
+dropzone.onclick = () => fileInput.click();
+
+dropzone.addEventListener("dragover", e => e.preventDefault());
+
+dropzone.addEventListener("drop", e => {
+  e.preventDefault();
+  loadFile(e.dataTransfer.files[0]);
+});
+
+fileInput.addEventListener("change", e => {
+  loadFile(e.target.files[0]);
+});
+
+function loadFile(file) {
+  filePath = window.electronAPI.getPath(file);
+
+  document.getElementById("fileInfo").innerHTML =
+    "<b>File:</b> " + file.name + "<br>" +
+    "<b>Path:</b> " + filePath;
+}
+
+function run() {
+
+  const ffmpeg = "C:\\Users\\Angel\\Documents\\ffmpeg-8.0.1-full_build\\bin\\ffmpeg.exe";
+
+  const outPath = filePath.replace(/\.[^\.]+$/, "") + " - ATMOS-FINAL.flac";
+
+const filter = `
+[0:a]asplit=6[main][bass_src][surr_src][rear_src][height_src][center_src];
+
+[bass_src]
+lowpass=f=90[bass];
+
+[surr_src]
+highpass=f=150,lowpass=f=7000[surr_hp];
+[surr_hp]
+extrastereo=m=0.55[surr_wide];
+[surr_wide]
+pan=stereo|
+c0=0.5*c0|
+c1=0.5*c1[surr_diff];
+[surr_diff]
+adelay=delays=10|20:all=1,
+volume=0.80[surrounds];
+
+[rear_src]
+highpass=f=150,lowpass=f=5000[rear_hp];
+[rear_hp]
+pan=stereo|
+c0=0.45*c0|
+c1=0.45*c1[rear_diff];
+[rear_diff]
+adelay=delays=15|25:all=1,
+volume=0.70[rears];
+
+[height_src]
+highpass=f=3500[height_hp];
+[height_hp]
+pan=stereo|
+c0=0.4*c0|
+c1=0.4*c1[height_diff];
+[height_diff]
+adelay=delays=2|5:all=1,
+volume=0.40[heights];
+
+[center_src]
+highpass=f=120,lowpass=f=3000[center_hp];
+[center_hp]
+pan=7.1|
+FL=0.0*c0|FR=0.0*c1|
+FC=0.60*c0+0.60*c1|
+LFE=0.0*c0|
+BL=0.0*c0|BR=0.0*c1|
+SL=0.0*c0|SR=0.0*c1[center_71];
+
+[main]
+pan=7.1|
+FL=0.95*c0|
+FR=0.95*c1|
+FC=0.0*c0|
+LFE=0.0*c0|
+BL=0.0*c0|BR=0.0*c1|
+SL=0.0*c0|SR=0.0*c1[front];
+
+[bass]
+pan=7.1|
+LFE=0.55*c0[lfe_71];
+
+[surrounds]
+pan=7.1|
+SL=c0|SR=c1[surr_71];
+
+[rears]
+pan=7.1|
+BL=c0|BR=c1[rear_71];
+
+[heights]
+pan=7.1|
+SL=0.35*c0|SR=0.35*c1[height_71];
+
+[front][center_71][lfe_71][surr_71][rear_71][height_71]
+amix=inputs=6:weights=1 0.95 0.9 0.85 0.8 0.65,
+alimiter=level_in=1:level_out=1:limit=0.97:attack=3:release=40[out]
+`;
+
+const args = [
+    "-i", filePath,
+    "-filter_complex", filter,
+    "-map", "[out]",
+    "-map", "0:v?",
+    "-map_metadata", "0",
+    "-map_metadata:s:a:0", "0:s:a:0",
+    "-c:a", "flac",
+    "-c:v", "copy",
+    "-ar", "44100",
+    "-sample_fmt", "s16",
+    outPath
+];
+
+  document.getElementById("status").textContent = "Processing...";
+
+  window.electronAPI.runFFmpeg({
+    ffmpeg,
+    args
+  }).then(res => {
+
+    console.log(res);
+
+    if (res.code !== 0) {
+      document.getElementById("status").textContent = "❌ Failed";
+      document.getElementById("output").textContent = res.stderr;
+    } else {
+      document.getElementById("status").textContent = "✅ Done";
+      document.getElementById("output").textContent = "OUTPUT:\n" + outPath;
+    }
+
+  });
+}
+</script>
+
+</body>
+</html>
