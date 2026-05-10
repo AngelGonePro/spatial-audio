@@ -86,54 +86,67 @@ function run() {
 
   const ffmpeg = "C:\\Users\\Angel\\Documents\\ffmpeg-8.0.1-full_build\\bin\\ffmpeg.exe";
 
-  const outPath = filePath.replace(/\.[^\.]+$/, "") + " - ATMOS-FINAL.flac";
+  const outPath = filePath.replace(/\.[^\.]+$/, "") + " - Upmix.flac";
 
 const filter = `
 [0:a]asplit=6[main][bass_src][surr_src][rear_src][height_src][center_src];
 
-[bass_src]lowpass=f=90[bass];
+[bass_src]lowpass=f=90[bass_lp];
+[bass_lp]equalizer=f=50:width_type=o:width=1:g=3[bass_eq];
+[bass_eq]equalizer=f=80:width_type=o:width=1:g=2[bass_eq2];
+[bass_eq2]pan=7.1|
+FL=0.35*c0|FR=0.35*c1|
+FC=0.0*c0|LFE=0.80*c0|
+BL=0.0*c0|BR=0.0*c0|
+SL=0.0*c0|SR=0.0*c0[lfe_71];
 
-[surr_src]highpass=f=150,lowpass=f=7000[surr_hp];
-[surr_hp]extrastereo=m=0.55[surr_wide];
-[surr_wide]pan=stereo|
-c0=0.5*c0|
-c1=0.5*c1[surr_diff];
-[surr_diff]adelay=delays=15|15:all=1,volume=0.85[surrounds];
-
-[rear_src]highpass=f=150,lowpass=f=5000[rear_hp];
-[rear_hp]pan=stereo|
-c0=0.45*c0|
-c1=0.45*c1[rear_diff];
-[rear_diff]adelay=delays=25|25:all=1,volume=0.80[rears];
-
-[height_src]highpass=f=3500[height_hp];
-[height_hp]pan=stereo|
-c0=0.4*c0|
-c1=0.4*c1[height_diff];
-[height_diff]adelay=delays=5|5:all=1,volume=0.45[heights];
-
-[center_src]highpass=f=120,lowpass=f=3000[center_hp];
-[center_hp]pan=7.1|
-FL=0.0*c0|FR=0.0*c1|
-FC=0.60*c0+0.60*c1|
+[center_src]highpass=f=150,lowpass=f=4000[center_hp];
+[center_hp]equalizer=f=900:width_type=o:width=1.5:g=2.5[center_pres];
+[center_pres]equalizer=f=3000:width_type=o:width=1.5:g=1.5[center_air];
+[center_air]equalizer=f=200:width_type=o:width=1:g=-2[center_mud];
+[center_mud]pan=7.1|
+FL=0.40*c0|FR=0.40*c1|
+FC=0.52*c0+0.52*c1|
 LFE=0.0*c0|
 BL=0.0*c0|BR=0.0*c1|
 SL=0.0*c0|SR=0.0*c1[center_71];
 
-[main]pan=7.1|
-FL=0.90*c0|
-FR=0.90*c1|
-FC=0.0*c0|
-LFE=0.0*c0|
+[main]equalizer=f=45:width_type=o:width=1:g=2[main_bass];
+[main_bass]equalizer=f=12000:width_type=o:width=2:g=1.5[main_air];
+[main_air]extrastereo=m=1.4[main_wide];
+[main_wide]pan=7.1|
+FL=c0|FR=c1|
+FC=0.0*c0|LFE=0.0*c0|
 BL=0.0*c0|BR=0.0*c1|
 SL=0.0*c0|SR=0.0*c1[front];
 
-[bass]pan=7.1|
-FL=0.30*c0|FR=0.30*c1|
-FC=0.0*c0|
-LFE=0.75*c0|
-BL=0.0*c0|BR=0.0*c0|
-SL=0.0*c0|SR=0.0*c0[lfe_71];
+[surr_src]highpass=f=120,lowpass=f=8000[surr_hp];
+[surr_hp]equalizer=f=1000:width_type=o:width=2:g=-2[surr_notch];
+[surr_notch]extrastereo=m=0.80[surr_wide];
+[surr_wide]adelay=delays=8|8:all=1[surr_delay];
+[surr_delay]pan=stereo|
+c0=0.55*c0|
+c1=0.55*c1[surr_diff];
+[surr_diff]volume=0.70[surrounds];
+
+[rear_src]highpass=f=120,lowpass=f=6000[rear_hp];
+[rear_hp]equalizer=f=800:width_type=o:width=2:g=-2[rear_notch];
+[rear_notch]extrastereo=m=0.70[rear_wide];
+[rear_wide]adelay=delays=15|15:all=1[rear_delay];
+[rear_delay]pan=stereo|
+c0=0.50*c0|
+c1=0.50*c1[rear_diff];
+[rear_diff]volume=0.62[rears];
+
+[height_src]highpass=f=2500,lowpass=f=16000[height_hp];
+[height_hp]equalizer=f=8000:width_type=o:width=2:g=2[height_air];
+[height_air]equalizer=f=12000:width_type=o:width=2:g=1.5[height_top];
+[height_top]extrastereo=m=0.70[height_wide];
+[height_wide]adelay=delays=4|4:all=1[height_delay];
+[height_delay]pan=stereo|
+c0=0.4*c0|
+c1=0.4*c1[height_diff];
+[height_diff]volume=0.45[heights];
 
 [surrounds]pan=7.1|
 FL=0.0*c0|FR=0.0*c1|
@@ -152,22 +165,24 @@ BL=0.0*c0|BR=0.0*c1|
 SL=0.35*c0|SR=0.35*c1[height_71];
 
 [front][center_71][lfe_71][surr_71][rear_71][height_71]
-amix=inputs=6:weights=1 1 0.9 1 1 0.7,
-alimiter=level_in=1:level_out=1:limit=0.97:attack=3:release=40[out]
+amix=inputs=6:weights=1 0.90 0.88 0.68 0.62 0.52[premix];
+
+[premix]alimiter=level_in=1:level_out=1:limit=0.97:attack=2:release=25:level=disabled[out]
 `;
 
 const args = [
-    "-i", filePath,
-    "-filter_complex", filter,
-    "-map", "[out]",
-    "-map", "0:v?",
-    "-map_metadata", "0",
-    "-map_metadata:s:a:0", "0:s:a:0",
-    "-c:a", "flac",
-    "-c:v", "copy",
-    "-ar", "44100",
-    "-sample_fmt", "s16",
-    outPath
+  "-i", filePath,
+  "-filter_complex", filter,
+  "-map", "[out]",
+  "-map", "0:v?",
+  "-map_metadata", "0",
+  "-map_metadata:s:a:0", "0:s:a:0",
+  "-metadata:s:a:0", "WAVEFORMATEXTENSIBLE_CHANNEL_MASK=0x63F",
+  "-c:a", "flac",
+  "-c:v", "copy",
+  "-ar", "48000",
+  "-sample_fmt", "s32",
+  outPath
 ];
 
   document.getElementById("status").textContent = "Processing...";
