@@ -86,57 +86,51 @@ function run() {
 
   const ffmpeg = "C:\\Users\\Angel\\Documents\\ffmpeg-8.0.1-full_build\\bin\\ffmpeg.exe";
 
-  const outPath = filePath.replace(/\.[^\.]+$/, "") + " - ATMOS-FINAL.flac";
+  const outPath = filePath.replace(/\.[^\.]+$/, "") + " - Downmix.flac";
 
 const filter = `
-[0:a]asplit=5[src1][src2][src3][src4][src5];
+[0:a]asplit=3[src1][src2][src3];
 
-[src1][src2]amerge=inputs=2[ms_in];
-[ms_in]pan=stereo|
-FL=0.5*c0+0.5*c1|
-FR=0.5*c0-0.5*c1[ms];
-[ms]asplit=2[mid][side];
-[mid]volume=0.95[mid_v];
-[side]volume=1.50[side_v];
-[mid_v][side_v]amerge=inputs=2[ms_out];
-[ms_out]pan=stereo|
-FL=c0+c1|
-FR=c0-c1[ms_decoded];
+[src1]pan=stereo|
+FL=FL+0.70*FC+0.50*LFE+0.70*BL+0.70*SL|
+FR=FR+0.70*FC+0.50*LFE+0.70*BR+0.70*SR[folded];
+[folded]volume=0.48[folded_v];
+
+[src2]pan=stereo|
+FL=FL-0.30*FR|
+FR=FR-0.30*FL[fl_fr_wide];
+[fl_fr_wide]volume=0.45[fl_fr_v];
 
 [src3]pan=stereo|
-FL=0.70*FC|
-FR=0.70*FC[vocal];
-[vocal]volume=0.60[vocal_v];
+FL=0.45*SL+0.45*BL|
+FR=0.45*SR+0.45*BR[surr_out];
+[surr_out]highpass=f=80[surr_hp];
+[surr_hp]lowpass=f=16000[surr_lp];
+[surr_lp]volume=0.35[surr_v];
 
-[src4]pan=stereo|
-FL=0.60*SL+0.60*BL-0.30*SR-0.30*BR|
-FR=0.60*SR+0.60*BR-0.30*SL-0.30*BL[surr];
-[surr]volume=0.65[surr_v];
+[folded_v][fl_fr_v][surr_v]
+amix=inputs=3:weights=1 1 1[mixed];
 
-[src5]pan=stereo|
-FL=LFE+0.5*FL+0.5*FR|
-FR=LFE+0.5*FL+0.5*FR[bass];
-[bass]lowpass=f=120[bass_lp];
-[bass_lp]volume=0.75[bass_v];
+[mixed]equalizer=f=250:width_type=o:width=1.5:g=1.5[low_mid];
+[low_mid]equalizer=f=500:width_type=o:width=1.5:g=1[mid_eq];
+[mid_eq]equalizer=f=3500:width_type=o:width=1.5:g=1.5[presence];
+[presence]equalizer=f=10000:width_type=o:width=2:g=2[air];
 
-[ms_decoded][vocal_v][surr_v][bass_v]
-amix=inputs=4:weights=1 0.80 0.65 0.90[mixed];
-[mixed]extrastereo=m=1.3[wide];
-[wide]alimiter=level_in=1:level_out=1:limit=0.98:attack=3:release=40:level=disabled[out]
+[air]alimiter=level_in=1:level_out=1:limit=0.98:attack=2:release=25:level=disabled[out]
 `;
 
 const args = [
-    "-i", filePath,
-    "-filter_complex", filter,
-    "-map", "[out]",
-    "-map", "0:v?",
-    "-map_metadata", "0",
-    "-map_metadata:s:a:0", "0:s:a:0",
-    "-c:a", "flac",
-    "-c:v", "copy",
-    "-ar", "44100",
-    "-sample_fmt", "s16",
-    outPath
+  "-i", filePath,
+  "-filter_complex", filter,
+  "-map", "[out]",
+  "-map", "0:v?",
+  "-map_metadata", "0",
+  "-map_metadata:s:a:0", "0:s:a:0",
+  "-c:a", "flac",
+  "-c:v", "copy",
+  "-ar", "48000",
+  "-sample_fmt", "s32",
+  outPath
 ];
 
   document.getElementById("status").textContent = "Processing...";
