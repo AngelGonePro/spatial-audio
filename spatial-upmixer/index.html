@@ -3,11 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <title>7.1 Upmixer Engine</title>
-
 <style>
 body { background:#0d0d0d; color:#e0e0e0; font-family:Segoe UI; padding:30px; }
 h1 { color:#00c8ff; }
-
 #dropzone {
   border:2px dashed #00c8ff55;
   padding:40px;
@@ -15,9 +13,7 @@ h1 { color:#00c8ff; }
   border-radius:12px;
   cursor:pointer;
 }
-
 .file-info { margin-top:10px; color:#aaa; }
-
 button {
   margin-top:15px;
   width:100%;
@@ -27,7 +23,6 @@ button {
   color:#00c8ff;
   cursor:pointer;
 }
-
 pre {
   margin-top:15px;
   background:#0a0a0a;
@@ -35,141 +30,73 @@ pre {
   color:#7fff7f;
   white-space:pre-wrap;
 }
-
 .status { margin-top:10px; color:#ffcc00; }
 </style>
 </head>
-
 <body>
-
 <h1>🎧 7.1 Upmixer Engine</h1>
-
 <div id="dropzone">Drag & Drop Audio File</div>
 <input type="file" id="fileInput" hidden>
-
 <div class="file-info" id="fileInfo"></div>
-
 <button onclick="run()">RUN Upmixer PROCESS</button>
-
 <div class="status" id="status">Idle</div>
-
 <pre id="output"></pre>
-
 <script>
 let filePath = "";
-
 const dropzone = document.getElementById("dropzone");
 const fileInput = document.getElementById("fileInput");
-
 dropzone.onclick = () => fileInput.click();
-
 dropzone.addEventListener("dragover", e => e.preventDefault());
-
 dropzone.addEventListener("drop", e => {
   e.preventDefault();
   loadFile(e.dataTransfer.files[0]);
 });
-
 fileInput.addEventListener("change", e => {
   loadFile(e.target.files[0]);
 });
-
 function loadFile(file) {
   filePath = window.electronAPI.getPath(file);
-
   document.getElementById("fileInfo").innerHTML =
     "<b>File:</b> " + file.name + "<br>" +
     "<b>Path:</b> " + filePath;
 }
-
 function run() {
-
   const ffmpeg = "C:\\Users\\Angel\\Documents\\ffmpeg-8.0.1-full_build\\bin\\ffmpeg.exe";
-
-  const outPath = filePath.replace(/\.[^\.]+$/, "") + " - Upmix.flac";
-
+  const outPath = filePath.replace(/\.[^\.]+$/, "") + " - 71Upmix.flac";
 const filter = `
-[0:a]asplit=6[main][bass_src][surr_src][rear_src][height_src][center_src];
-
+[0:a]asplit=6[main][bass_src][amb_src][rear_src][center_src][height_src];
 [bass_src]lowpass=f=90[bass_lp];
-[bass_lp]equalizer=f=50:width_type=o:width=1:g=3[bass_eq];
-[bass_eq]equalizer=f=80:width_type=o:width=1:g=2[bass_eq2];
-[bass_eq2]pan=7.1|
-FL=0.35*c0|FR=0.35*c1|
-FC=0.0*c0|LFE=0.80*c0|
-BL=0.0*c0|BR=0.0*c0|
-SL=0.0*c0|SR=0.0*c0[lfe_71];
-
+[bass_lp]equalizer=f=50:width_type=o:width=1:g=2[bass_eq];
+[bass_eq]equalizer=f=80:width_type=o:width=1:g=1.5[bass_eq2];
+[bass_eq2]pan=7.1|FL=0.35*c0|FR=0.35*c1|FC=0.0*c0|LFE=0.72*c0|BL=0.0*c0|BR=0.0*c0|SL=0.0*c0|SR=0.0*c0[lfe_71];
 [center_src]highpass=f=150,lowpass=f=4000[center_hp];
-[center_hp]equalizer=f=900:width_type=o:width=1.5:g=2.5[center_pres];
+[center_hp]equalizer=f=900:width_type=o:width=1.5:g=2[center_pres];
 [center_pres]equalizer=f=3000:width_type=o:width=1.5:g=1.5[center_air];
-[center_air]equalizer=f=200:width_type=o:width=1:g=-2[center_mud];
-[center_mud]pan=7.1|
-FL=0.40*c0|FR=0.40*c1|
-FC=0.52*c0+0.52*c1|
-LFE=0.0*c0|
-BL=0.0*c0|BR=0.0*c1|
-SL=0.0*c0|SR=0.0*c1[center_71];
-
-[main]equalizer=f=45:width_type=o:width=1:g=2[main_bass];
-[main_bass]equalizer=f=12000:width_type=o:width=2:g=1.5[main_air];
-[main_air]extrastereo=m=1.4[main_wide];
-[main_wide]pan=7.1|
-FL=c0|FR=c1|
-FC=0.0*c0|LFE=0.0*c0|
-BL=0.0*c0|BR=0.0*c1|
-SL=0.0*c0|SR=0.0*c1[front];
-
-[surr_src]highpass=f=120,lowpass=f=8000[surr_hp];
-[surr_hp]equalizer=f=1000:width_type=o:width=2:g=-2[surr_notch];
-[surr_notch]extrastereo=m=0.80[surr_wide];
-[surr_wide]adelay=delays=8|8:all=1[surr_delay];
-[surr_delay]pan=stereo|
-c0=0.55*c0|
-c1=0.55*c1[surr_diff];
-[surr_diff]volume=0.70[surrounds];
-
-[rear_src]highpass=f=120,lowpass=f=6000[rear_hp];
-[rear_hp]equalizer=f=800:width_type=o:width=2:g=-2[rear_notch];
-[rear_notch]extrastereo=m=0.70[rear_wide];
-[rear_wide]adelay=delays=15|15:all=1[rear_delay];
-[rear_delay]pan=stereo|
-c0=0.50*c0|
-c1=0.50*c1[rear_diff];
-[rear_diff]volume=0.62[rears];
-
-[height_src]highpass=f=2500,lowpass=f=16000[height_hp];
-[height_hp]equalizer=f=8000:width_type=o:width=2:g=2[height_air];
-[height_air]equalizer=f=12000:width_type=o:width=2:g=1.5[height_top];
-[height_top]extrastereo=m=0.70[height_wide];
-[height_wide]adelay=delays=4|4:all=1[height_delay];
-[height_delay]pan=stereo|
-c0=0.4*c0|
-c1=0.4*c1[height_diff];
-[height_diff]volume=0.45[heights];
-
-[surrounds]pan=7.1|
-FL=0.0*c0|FR=0.0*c1|
-FC=0.0*c0|LFE=0.0*c0|
-BL=0.0*c0|BR=0.0*c1|
-SL=c0|SR=c1[surr_71];
-
-[rears]pan=7.1|
-FL=0.0*c0|FR=0.0*c1|FC=0.0*c0|LFE=0.0*c0|
-BL=c0|BR=c1|
-SL=0.0*c0|SR=0.0*c1[rear_71];
-
-[heights]pan=7.1|
-FL=0.0*c0|FR=0.0*c1|FC=0.0*c0|LFE=0.0*c0|
-BL=0.0*c0|BR=0.0*c1|
-SL=0.35*c0|SR=0.35*c1[height_71];
-
-[front][center_71][lfe_71][surr_71][rear_71][height_71]
-amix=inputs=6:weights=1 0.90 0.88 0.68 0.62 0.52[premix];
-
-[premix]alimiter=level_in=1:level_out=1:limit=0.97:attack=2:release=25:level=disabled[out]
-`;
-
+[center_air]equalizer=f=200:width_type=o:width=1:g=-1.5[center_mud];
+[center_mud]pan=7.1|FL=0.45*c0|FR=0.45*c1|FC=0.52*c0+0.52*c1|LFE=0.0*c0|BL=0.0*c0|BR=0.0*c1|SL=0.0*c0|SR=0.0*c0[center_71];
+[main]equalizer=f=45:width_type=o:width=1:g=1.5[main_bass];
+[main_bass]equalizer=f=80:width_type=o:width=1:g=1.5[main_bass2];
+[main_bass2]equalizer=f=300:width_type=o:width=1.5:g=1[main_low_mid];
+[main_low_mid]equalizer=f=600:width_type=o:width=1.5:g=1[main_mid];
+[main_mid]equalizer=f=180:width_type=o:width=1.5:g=-1[main_mud];
+[main_mud]equalizer=f=12000:width_type=o:width=2:g=1.5[main_air];
+[main_air]pan=7.1|FL=c0|FR=c1|FC=0.0*c0|LFE=0.0*c0|BL=0.0*c0|BR=0.0*c1|SL=0.0*c0|SR=0.0*c0[front];
+[amb_src]highpass=f=120,lowpass=f=8000[amb_hp];
+[amb_hp]equalizer=f=1000:width_type=o:width=2:g=-1.5[amb_notch];
+[amb_notch]extrastereo=m=0.70[amb_wide];
+[amb_wide]pan=7.1|FL=0.0*c0|FR=0.0*c1|FC=0.0*c0|LFE=0.0*c0|BL=0.0*c0|BR=0.0*c1|SL=0.55*c0|SR=0.55*c1[side_71];
+[rear_src]highpass=f=150,lowpass=f=6000[rear_hp];
+[rear_hp]equalizer=f=800:width_type=o:width=2:g=-1.5[rear_notch];
+[rear_notch]extrastereo=m=0.55[rear_wide];
+[rear_wide]adelay=delays=6|6:all=1[rear_delay];
+[rear_delay]pan=7.1|FL=0.0*c0|FR=0.0*c1|FC=0.0*c0|LFE=0.0*c0|BL=0.50*c0|BR=0.50*c1|SL=0.0*c0|SR=0.0*c0[rear_71];
+[height_src]highpass=f=3500,lowpass=f=16000[height_hp];
+[height_hp]equalizer=f=8000:width_type=o:width=2:g=1.5[height_air];
+[height_air]extrastereo=m=0.55[height_wide];
+[height_wide]pan=7.1|FL=0.0*c0|FR=0.0*c1|FC=0.0*c0|LFE=0.0*c0|BL=0.0*c0|BR=0.0*c1|SL=0.35*c0|SR=0.35*c1[height_71];
+[front][center_71][lfe_71][side_71][rear_71][height_71]amix=inputs=6:weights=1 0.90 0.88 0.70 0.62 0.50[premix];
+[premix]loudnorm=I=-14:TP=-1.0:LRA=11[out]
+`.split('\n').map(l => l.trim()).filter(l => l.length > 0).join(' ');
 const args = [
   "-i", filePath,
   "-filter_complex", filter,
@@ -184,16 +111,12 @@ const args = [
   "-sample_fmt", "s32",
   outPath
 ];
-
   document.getElementById("status").textContent = "Processing...";
-
   window.electronAPI.runFFmpeg({
     ffmpeg,
     args
   }).then(res => {
-
     console.log(res);
-
     if (res.code !== 0) {
       document.getElementById("status").textContent = "❌ Failed";
       document.getElementById("output").textContent = res.stderr;
@@ -201,10 +124,8 @@ const args = [
       document.getElementById("status").textContent = "✅ Done";
       document.getElementById("output").textContent = "OUTPUT:\n" + outPath;
     }
-
   });
 }
 </script>
-
 </body>
 </html>
