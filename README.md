@@ -43,4 +43,4 @@ Then run `npm start`
 <br>
 
 For `spatial-downmixer` and `spatial-upmixer`, PLEASE use a 24bit 48kHz FLAC files unless you know what you're doing and can change the perameters for the files you have, just use something like Audacity to convert whaterver file you have to it.
-For `true-dolby-atmos-dowmixer` and `true-dolby-atmos-dowmixer`(comming soon) will tell you what file types are supported and if the file type you have needs conversion or not.
+For `true-dolby-atmos-downmixer` and `true-dolby-atmos-upmixer`(comming soon) will tell you what file types are supported and if the file type you have needs conversion or not.
