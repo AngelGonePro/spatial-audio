@@ -3,122 +3,67 @@
 <head>
 <meta charset="UTF-8">
 <title>7.1 Downmixer Engine</title>
-
 <style>
 body { background:#0d0d0d; color:#e0e0e0; font-family:Segoe UI; padding:30px; }
 h1 { color:#00c8ff; }
-
-#dropzone {
-  border:2px dashed #00c8ff55;
-  padding:40px;
-  text-align:center;
-  border-radius:12px;
-  cursor:pointer;
-}
-
+#dropzone { border:2px dashed #00c8ff55; padding:40px; text-align:center; border-radius:12px; cursor:pointer; }
 .file-info { margin-top:10px; color:#aaa; }
-
-button {
-  margin-top:15px;
-  width:100%;
-  padding:12px;
-  background:#111;
-  border:1px solid #333;
-  color:#00c8ff;
-  cursor:pointer;
-}
-
-pre {
-  margin-top:15px;
-  background:#0a0a0a;
-  padding:12px;
-  color:#7fff7f;
-  white-space:pre-wrap;
-}
-
+button { margin-top:15px; width:100%; padding:12px; background:#111; border:1px solid #333; color:#00c8ff; cursor:pointer; }
+pre { margin-top:15px; background:#0a0a0a; padding:12px; color:#7fff7f; white-space:pre-wrap; }
 .status { margin-top:10px; color:#ffcc00; }
 </style>
 </head>
-
 <body>
-
 <h1>🎧 7.1 Downmixer Engine</h1>
-
-<div id="dropzone">Drag & Drop Audio File</div>
+<div id="dropzone">Drag & Drop 7.1 Audio File</div>
 <input type="file" id="fileInput" hidden>
-
 <div class="file-info" id="fileInfo"></div>
-
 <button onclick="run()">RUN Downmix PROCESS</button>
-
 <div class="status" id="status">Idle</div>
-
 <pre id="output"></pre>
-
 <script>
 let filePath = "";
-
 const dropzone = document.getElementById("dropzone");
 const fileInput = document.getElementById("fileInput");
-
 dropzone.onclick = () => fileInput.click();
-
 dropzone.addEventListener("dragover", e => e.preventDefault());
-
 dropzone.addEventListener("drop", e => {
   e.preventDefault();
   loadFile(e.dataTransfer.files[0]);
 });
-
-fileInput.addEventListener("change", e => {
-  loadFile(e.target.files[0]);
-});
-
+fileInput.addEventListener("change", e => { loadFile(e.target.files[0]); });
 function loadFile(file) {
   filePath = window.electronAPI.getPath(file);
-
   document.getElementById("fileInfo").innerHTML =
-    "<b>File:</b> " + file.name + "<br>" +
-    "<b>Path:</b> " + filePath;
+    "<b>File:</b> " + file.name + "<br><b>Path:</b> " + filePath;
 }
-
 function run() {
-
   const ffmpeg = "C:\\Users\\Angel\\Documents\\ffmpeg-8.0.1-full_build\\bin\\ffmpeg.exe";
-
-  const outPath = filePath.replace(/\.[^\.]+$/, "") + " - Downmix.flac";
-
+  const outPath = filePath.replace(/\.[^\.]+$/, "") + " - Stereo.flac";
 const filter = `
-[0:a]asplit=3[src1][src2][src3];
-
-[src1]pan=stereo|
-FL=FL+0.70*FC+0.50*LFE+0.70*BL+0.70*SL|
-FR=FR+0.70*FC+0.50*LFE+0.70*BR+0.70*SR[folded];
-[folded]volume=0.48[folded_v];
-
-[src2]pan=stereo|
-FL=FL-0.30*FR|
-FR=FR-0.30*FL[fl_fr_wide];
-[fl_fr_wide]volume=0.45[fl_fr_v];
-
-[src3]pan=stereo|
-FL=0.45*SL+0.45*BL|
-FR=0.45*SR+0.45*BR[surr_out];
-[surr_out]highpass=f=80[surr_hp];
+[0:a]asplit=3[fold_src][width_src][surr_src];
+[fold_src]pan=stereo|FL=FL+0.50*FC+0.40*LFE+0.60*BL+0.60*SL|FR=FR+0.50*FC+0.40*LFE+0.60*BR+0.60*SR[folded];
+[folded]volume=0.50[fold_v];
+[width_src]pan=stereo|FL=0.45*FL|FR=0.45*FR[fl_fr];
+[fl_fr]extrastereo=m=1.10[width_wide];
+[width_wide]volume=0.42[width_v];
+[surr_src]pan=stereo|FL=0.40*SL+0.40*BL|FR=0.40*SR+0.40*BR[surr_out];
+[surr_out]highpass=f=120[surr_hp];
 [surr_hp]lowpass=f=16000[surr_lp];
-[surr_lp]volume=0.35[surr_v];
-
-[folded_v][fl_fr_v][surr_v]
-amix=inputs=3:weights=1 1 1[mixed];
-
-[mixed]equalizer=f=250:width_type=o:width=1.5:g=1.5[low_mid];
-[low_mid]equalizer=f=500:width_type=o:width=1.5:g=1[mid_eq];
-[mid_eq]equalizer=f=3500:width_type=o:width=1.5:g=1.5[presence];
-[presence]equalizer=f=10000:width_type=o:width=2:g=2[air];
-
-[air]alimiter=level_in=1:level_out=1:limit=0.98:attack=2:release=25:level=disabled[out]
-`;
-
+[surr_lp]volume=0.30[surr_v];
+[fold_v][width_v][surr_v]amix=inputs=3:weights=1 1 1[mixed];
+[mixed]equalizer=f=45:width_type=o:width=1:g=2.5[sub];
+[sub]equalizer=f=90:width_type=o:width=1:g=1.5[bass];
+[bass]equalizer=f=180:width_type=o:width=1.5:g=-1[mud_cut];
+[mud_cut]equalizer=f=350:width_type=o:width=1.5:g=-0.5[low_mid_cut];
+[low_mid_cut]equalizer=f=700:width_type=o:width=1.5:g=0.5[snare_body];
+[snare_body]equalizer=f=2200:width_type=o:width=0.5:g=-2[scratch_cut1];
+[scratch_cut1]equalizer=f=2800:width_type=o:width=0.5:g=-1.5[scratch_cut2];
+[scratch_cut2]equalizer=f=3500:width_type=o:width=1.0:g=1[presence];
+[presence]equalizer=f=8000:width_type=o:width=2:g=1[hi_pres];
+[hi_pres]equalizer=f=12000:width_type=o:width=2:g=1.5[air];
+[air]loudnorm=I=-14:TP=-1.0:LRA=11[out]
+`.split('\n').map(l => l.trim()).filter(l => l.length > 0).join(' ');
 const args = [
   "-i", filePath,
   "-filter_complex", filter,
@@ -132,16 +77,8 @@ const args = [
   "-sample_fmt", "s32",
   outPath
 ];
-
   document.getElementById("status").textContent = "Processing...";
-
-  window.electronAPI.runFFmpeg({
-    ffmpeg,
-    args
-  }).then(res => {
-
-    console.log(res);
-
+  window.electronAPI.runFFmpeg({ ffmpeg, args }).then(res => {
     if (res.code !== 0) {
       document.getElementById("status").textContent = "❌ Failed";
       document.getElementById("output").textContent = res.stderr;
@@ -149,10 +86,8 @@ const args = [
       document.getElementById("status").textContent = "✅ Done";
       document.getElementById("output").textContent = "OUTPUT:\n" + outPath;
     }
-
   });
 }
 </script>
-
 </body>
 </html>
