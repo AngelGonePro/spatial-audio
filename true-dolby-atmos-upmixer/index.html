@@ -288,13 +288,13 @@
       <div class="rrow"><span>Dry</span><span>Diffuse</span></div>
     </div>
     <div class="card">
-      <label>Surround Width (extrastereo)  <span class="va" id="xsVal">1.15×</span></label>
-      <input type="range" id="xsSlider" min="0.8" max="2.0" step="0.05" value="1.15">
+      <label>Surround Width (extrastereo)  <span class="va" id="xsVal">1.00×</span></label>
+      <input type="range" id="xsSlider" min="0.8" max="2.0" step="0.05" value="1.0">
       <div class="rrow"><span>0.8×</span><span>2.0×</span></div>
     </div>
     <div class="card">
-      <label>Haas ITD Surround (ms)  <span class="vb" id="haasVal">1.5 ms</span></label>
-      <input type="range" id="haasSlider" min="0" max="4" step="0.5" value="1.5">
+      <label>Haas ITD Surround (ms)  <span class="vb" id="haasVal">0.0 ms</span></label>
+      <input type="range" id="haasSlider" min="0" max="4" step="0.5" value="0">
       <div class="rrow"><span>Off</span><span>4 ms</span></div>
     </div>
   </div>
@@ -698,14 +698,15 @@ function buildFilter() {
   }
 
   // ── BL / BR ──
-  // Same additive Mid source but delayed (rear depth) + darker EQ + more diffuse reverb
+  // Same symmetric stereo source as SL/SR but with longer delay + darker EQ.
+  // PHANTOM-CENTRE FIX: same symmetric pan as SL/SR — FL-weighted L, FR-weighted R.
+  // Both channels delayed by the SAME amount — no L/R timing difference.
   if (useRear) {
-    lines.push(`[bl_src]pan=mono|c0=0.5*FL+0.5*FR[bl_mid]`);
-    lines.push(`[bl_mid]highpass=f=80[bl_hp]`);
+    lines.push(`[bl_src]pan=stereo|FL=0.6*FL+0.4*FR|FR=0.4*FL+0.6*FR[bl_stereo]`);
+    lines.push(`[bl_stereo]highpass=f=80[bl_hp]`);
     lines.push(`[bl_hp]lowpass=f=12000[bl_lp]`);   // rears are naturally darker
-    lines.push(`[bl_lp]pan=stereo|FL=c0|FR=c0[bl_stereo]`);
-    // Rear delay: creates the sense of depth vs surrounds
-    lines.push(`[bl_stereo]adelay=delays=${rearMs}|${rearMsR}[bl_dly]`);
+    // Symmetric delay on both channels — equal timing preserves phantom centre
+    lines.push(`[bl_lp]adelay=delays=${rearMs}|${rearMs}[bl_dly]`);
     // More diffuse reverb for rear envelopment
     if (useRev) {
       const rev2G = (parseFloat(rev2Bl) * 0.75 + 0.25).toFixed(3);
@@ -725,14 +726,14 @@ function buildFilter() {
   }
 
   // ── DETAIL RECOVERY ──
-  // Separate Mid extract, highpassed to recover upper-mid background content.
+  // Separate stereo extract (symmetric), highpassed to recover upper-mid background content.
   // Blended additively into surround/rear mix — never subtracts anything.
+  // Uses symmetric stereo pan (not mono-dup) to keep centre stable.
   if (useDetail && (useSurr || useRear)) {
-    lines.push(`[det_src]pan=mono|c0=0.5*FL+0.5*FR[det_mid]`);
-    lines.push(`[det_mid]highpass=f=300[det_hp]`);
+    lines.push(`[det_src]pan=stereo|FL=0.6*FL+0.4*FR|FR=0.4*FL+0.6*FR[det_stereo]`);
+    lines.push(`[det_stereo]highpass=f=300[det_hp]`);
     lines.push(`[det_hp]lowpass=f=12000[det_lp]`);
-    lines.push(`[det_lp]pan=stereo|FL=c0|FR=c0[det_stereo]`);
-    lines.push(`[det_stereo]volume=${drBlend}[det_out]`);
+    lines.push(`[det_lp]volume=${drBlend}[det_out]`);
   }
 
   // ── DC OFFSET ──
