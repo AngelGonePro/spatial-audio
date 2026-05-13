@@ -282,8 +282,8 @@
       <div class="rrow"><span>Off</span><span>Heavy</span></div>
     </div>
     <div class="card">
-      <label>Stereo Width (extrastereo)  <span class="va" id="xsVal">1.10×</span></label>
-      <input type="range" id="xsSlider" min="0.8" max="1.8" step="0.05" value="1.10">
+      <label>Stereo Width (extrastereo)  <span class="va" id="xsVal">1.00×</span></label>
+      <input type="range" id="xsSlider" min="0.8" max="1.8" step="0.05" value="1.0">
       <div class="rrow"><span>Narrow</span><span>Wide</span></div>
     </div>
   </div>
@@ -621,15 +621,15 @@ function buildFilter() {
   }
 
   // ── LAYER 3: Haas ITD surround width ──
-  // Apply a tiny delay to the whole mix (alternating L/R) to encode
-  // surround width cue into the stereo image without phase cancellation.
-  // This is different from the old approach — it widens the fold itself,
-  // not a separate side channel.
+  // Blends a delayed copy of the surround/rear fold into the mix to add spaciousness.
+  // PHANTOM-CENTRE FIX: delay is now applied EQUALLY to both L and R channels.
+  // The old adelay=0|1.2 left L undelayed and delayed R by 1.2ms — when Voicemeeter
+  // summed all channels, L arrived 1.2ms earlier, which the brain (and downmix math)
+  // interprets as a left-biased image. Equal delay on both channels adds room feel
+  // without any L/R timing difference.
   if (useHaas) {
-    // Split the detail mix, delay one copy by 0.8ms on R channel only,
-    // then blend at low level to add width to the stereo image
     lines.push(`[haas_a]pan=stereo|FL=0.45*SL+0.45*BL|FR=0.45*SR+0.45*BR[haas_surr]`);
-    lines.push(`[haas_surr]adelay=delays=0|1.2[haas_delay]`);
+    lines.push(`[haas_surr]adelay=delays=1.2|1.2[haas_delay]`);
     lines.push(`[haas_delay]volume=0.28[haas_v]`);
     lines.push(`[with_detail][haas_v]amix=inputs=2:weights=1 1:normalize=0[with_haas]`);
   } else {
