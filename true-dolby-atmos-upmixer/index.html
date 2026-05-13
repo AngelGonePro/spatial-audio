@@ -2,22 +2,22 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>7.1 → Stereo Downmixer — Full Preservation</title>
+<title>Stereo → 7.1 Spatial Upmixer v3</title>
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
 <style>
   :root {
-    --bg:       #06080e;
-    --panel:    #0b0e17;
-    --border:   #182030;
-    --accent:   #00d4ff;
+    --bg:       #060d0a;
+    --panel:    #0b1410;
+    --border:   #182820;
+    --accent:   #39ff85;
     --accent2:  #ff6b35;
-    --green:    #39ff85;
-    --yellow:   #ffcc00;
+    --blue:     #00d4ff;
     --purple:   #b06cff;
+    --yellow:   #ffcc00;
     --red:      #ff4466;
-    --muted:    #3a4d60;
-    --text:     #c0d4e4;
-    --heading:  #e4f0ff;
+    --muted:    #3a5045;
+    --text:     #b8d4c0;
+    --heading:  #e0f4e8;
   }
   *{box-sizing:border-box;margin:0;padding:0;}
   body{
@@ -28,156 +28,148 @@
   }
   body::before{
     content:'';position:fixed;inset:0;
-    background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,212,255,.010) 2px,rgba(0,212,255,.010) 4px);
+    background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(57,255,133,.009) 2px,rgba(57,255,133,.009) 4px);
     pointer-events:none;z-index:999;
   }
   body::after{
-    content:'';position:fixed;top:0;left:0;width:280px;height:280px;
-    background:radial-gradient(circle at 0 0,rgba(0,212,255,.045) 0%,transparent 70%);
+    content:'';position:fixed;bottom:0;right:0;width:300px;height:300px;
+    background:radial-gradient(circle at 100% 100%,rgba(57,255,133,.04) 0%,transparent 70%);
     pointer-events:none;
   }
-  .wrapper{max-width:820px;margin:0 auto;}
+  .wrapper{max-width:840px;margin:0 auto;}
 
+  /* ── HEADER ── */
   header{display:flex;align-items:center;gap:14px;border-bottom:1px solid var(--border);padding-bottom:18px;margin-bottom:26px;}
-  .logo{width:50px;height:50px;border:1.5px solid var(--accent);border-radius:9px;display:grid;place-items:center;font-size:22px;box-shadow:0 0 18px rgba(0,212,255,.28);animation:glow 3s ease-in-out infinite;}
-  @keyframes glow{0%,100%{box-shadow:0 0 12px rgba(0,212,255,.22);}50%{box-shadow:0 0 30px rgba(0,212,255,.55);}}
+  .logo{width:50px;height:50px;border:1.5px solid var(--accent);border-radius:9px;display:grid;place-items:center;font-size:22px;box-shadow:0 0 18px rgba(57,255,133,.28);animation:glow 3s ease-in-out infinite;}
+  @keyframes glow{0%,100%{box-shadow:0 0 12px rgba(57,255,133,.22);}50%{box-shadow:0 0 30px rgba(57,255,133,.55);}}
   .htxt h1{font-family:'Orbitron',sans-serif;font-size:1.05rem;font-weight:900;color:var(--heading);letter-spacing:.13em;text-transform:uppercase;}
   .htxt p{font-size:.67rem;color:var(--muted);margin-top:3px;letter-spacing:.05em;}
-  .badge{margin-left:auto;padding:4px 10px;background:rgba(0,212,255,.07);border:1px solid rgba(0,212,255,.28);border-radius:4px;font-size:.62rem;color:var(--accent);letter-spacing:.1em;}
-  .badge2{margin-left:6px;padding:4px 10px;background:rgba(57,255,133,.07);border:1px solid rgba(57,255,133,.28);border-radius:4px;font-size:.62rem;color:var(--green);letter-spacing:.1em;}
+  .badge{margin-left:auto;padding:4px 10px;background:rgba(57,255,133,.07);border:1px solid rgba(57,255,133,.28);border-radius:4px;font-size:.62rem;color:var(--accent);letter-spacing:.1em;}
+  .badge2{margin-left:6px;padding:4px 10px;background:rgba(0,212,255,.07);border:1px solid rgba(0,212,255,.28);border-radius:4px;font-size:.62rem;color:var(--blue);letter-spacing:.1em;}
 
+  /* ── SECTION LABEL ── */
   .slbl{font-size:.6rem;letter-spacing:.18em;color:var(--muted);text-transform:uppercase;margin-bottom:7px;margin-top:22px;display:flex;align-items:center;gap:8px;}
   .slbl::before{content:'';display:inline-block;width:10px;height:1px;background:var(--accent);opacity:.55;}
 
-  #dropzone{border:1.5px dashed rgba(0,212,255,.3);border-radius:10px;padding:32px 22px;text-align:center;cursor:pointer;background:rgba(0,212,255,.016);transition:border-color .2s,background .2s;}
-  #dropzone:hover,#dropzone.drag-over{border-color:var(--accent);background:rgba(0,212,255,.04);}
+  /* ── DROPZONE ── */
+  #dropzone{border:1.5px dashed rgba(57,255,133,.28);border-radius:10px;padding:32px 22px;text-align:center;cursor:pointer;background:rgba(57,255,133,.014);transition:border-color .2s,background .2s;}
+  #dropzone:hover,#dropzone.drag-over{border-color:var(--accent);background:rgba(57,255,133,.038);}
   .dz-icon{font-size:2.2rem;display:block;margin-bottom:8px;}
   .dz-main{font-family:'Orbitron',sans-serif;font-size:.76rem;color:var(--accent);letter-spacing:.1em;}
   .dz-sub{font-size:.65rem;color:var(--muted);margin-top:4px;}
 
+  /* ── FILE INFO ── */
   #fileInfo{display:none;margin-top:9px;padding:9px 13px;background:var(--panel);border:1px solid var(--border);border-radius:6px;font-size:.7rem;color:var(--text);line-height:1.75;}
   .fname{color:var(--accent);font-weight:bold;}
   .fpath{color:var(--muted);word-break:break-all;}
 
-  /* channel grid */
+  /* ── CHANNEL OUTPUT MAP ── */
   .ch-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-top:6px;}
-  .ch{border:1px solid var(--border);border-radius:7px;padding:8px 5px 6px;text-align:center;background:var(--panel);transition:border-color .3s,background .3s;}
-  .ch.active{border-color:var(--accent);background:rgba(0,212,255,.05);}
-  .ch.out{border-color:rgba(57,255,133,.35);background:rgba(57,255,133,.025);}
+  .ch{border:1px solid var(--border);border-radius:7px;padding:9px 5px 7px;text-align:center;background:var(--panel);}
+  .ch.front  {border-color:rgba(0,212,255,.35); background:rgba(0,212,255,.03);}
+  .ch.center {border-color:rgba(255,204,0,.35); background:rgba(255,204,0,.03);}
+  .ch.lfe-ch {border-color:rgba(255,107,53,.35);background:rgba(255,107,53,.03);}
+  .ch.side-s {border-color:rgba(176,108,255,.35);background:rgba(176,108,255,.03);}
+  .ch.rear-s {border-color:rgba(57,255,133,.35); background:rgba(57,255,133,.03);}
   .ch .lbl{font-family:'Orbitron',sans-serif;font-size:.58rem;letter-spacing:.07em;color:var(--muted);}
-  .ch.active .lbl{color:var(--accent);}
-  .ch.out .lbl{color:var(--green);}
+  .ch.front  .lbl{color:var(--blue);}
+  .ch.center .lbl{color:var(--yellow);}
+  .ch.lfe-ch .lbl{color:var(--accent2);}
+  .ch.side-s .lbl{color:var(--purple);}
+  .ch.rear-s .lbl{color:var(--accent);}
   .ch .dot{margin:5px auto 0;width:26px;height:26px;border-radius:50%;background:var(--border);display:grid;place-items:center;font-size:.58rem;color:var(--muted);}
-  .ch.active .dot{background:rgba(0,212,255,.18);color:var(--accent);}
-  .ch.out .dot{background:rgba(57,255,133,.14);color:var(--green);}
-  .ch .role{font-size:.5rem;color:var(--muted);margin-top:3px;}
-  .ch.active .role{color:rgba(0,212,255,.6);}
+  .ch.front  .dot{background:rgba(0,212,255,.16);color:var(--blue);}
+  .ch.center .dot{background:rgba(255,204,0,.14);color:var(--yellow);}
+  .ch.lfe-ch .dot{background:rgba(255,107,53,.16);color:var(--accent2);}
+  .ch.side-s .dot{background:rgba(176,108,255,.16);color:var(--purple);}
+  .ch.rear-s .dot{background:rgba(57,255,133,.14);color:var(--accent);}
+  .ch .role{font-size:.5rem;color:var(--muted);margin-top:3px;letter-spacing:.04em;}
 
-  /* mix path diagram */
-  .mix-diagram{
-    margin-top:10px;background:var(--panel);border:1px solid var(--border);
-    border-radius:8px;padding:13px 16px;font-size:.65rem;line-height:2.0;
-    color:var(--muted);
-  }
-  .mix-diagram .row{display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;}
-  .mix-diagram .ch-tag{
-    display:inline-block;padding:1px 7px;border-radius:3px;
-    font-family:'Orbitron',sans-serif;font-size:.58rem;font-weight:600;
-  }
-  .ct-fl{background:rgba(0,212,255,.12);color:var(--accent);border:1px solid rgba(0,212,255,.3);}
-  .ct-fc{background:rgba(255,204,0,.10);color:var(--yellow);border:1px solid rgba(255,204,0,.3);}
-  .ct-lfe{background:rgba(255,107,53,.10);color:var(--accent2);border:1px solid rgba(255,107,53,.3);}
-  .ct-sl{background:rgba(176,108,255,.10);color:var(--purple);border:1px solid rgba(176,108,255,.3);}
-  .ct-bl{background:rgba(57,255,133,.10);color:var(--green);border:1px solid rgba(57,255,133,.3);}
-  .arrow{color:var(--muted);margin:0 4px;}
+  /* ── LEGEND ── */
+  .legend{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;font-size:.6rem;}
+  .leg{display:flex;align-items:center;gap:5px;padding:3px 8px;border-radius:4px;border:1px solid;}
+  .leg-dot{width:7px;height:7px;border-radius:50%;}
+  .leg.front {border-color:rgba(0,212,255,.3);color:var(--blue);}   .leg.front .leg-dot{background:var(--blue);}
+  .leg.center{border-color:rgba(255,204,0,.3);color:var(--yellow);} .leg.center .leg-dot{background:var(--yellow);}
+  .leg.lfe   {border-color:rgba(255,107,53,.3);color:var(--accent2);}.leg.lfe .leg-dot{background:var(--accent2);}
+  .leg.side  {border-color:rgba(176,108,255,.3);color:var(--purple);}.leg.side .leg-dot{background:var(--purple);}
+  .leg.rear  {border-color:rgba(57,255,133,.3);color:var(--accent);} .leg.rear .leg-dot{background:var(--accent);}
 
-  /* options */
+  /* ── INFO BOX ── */
+  .info-box{margin-top:11px;background:rgba(57,255,133,.03);border:1px solid rgba(57,255,133,.16);border-radius:7px;padding:11px 14px;font-size:.66rem;color:#7db890;line-height:1.8;}
+  .info-box strong{color:var(--accent);}
+  .info-box .note{color:var(--blue);font-weight:bold;}
+  .info-box code{color:var(--yellow);font-size:.63rem;}
+
+  /* ── OPTIONS / CARDS ── */
   .opts{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:6px;}
   .opts3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-top:6px;}
   .card{background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:11px 13px;}
-  .card.highlight{border-color:rgba(255,68,102,.4);background:rgba(255,68,102,.03);}
   .card label{font-size:.62rem;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;display:block;margin-bottom:6px;}
-  .card.highlight label{color:rgba(255,68,102,.9);}
   .card select,.card input[type=range]{width:100%;background:var(--bg);border:1px solid var(--border);color:var(--text);font-family:'Share Tech Mono',monospace;font-size:.74rem;padding:6px 8px;border-radius:5px;outline:none;appearance:none;cursor:pointer;}
   .card select:focus{border-color:var(--accent);}
   input[type=range]{-webkit-appearance:none;height:4px;background:var(--border);border:none!important;padding:0!important;cursor:pointer;margin-top:4px;}
-  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:13px;height:13px;background:var(--accent);border-radius:50%;cursor:pointer;box-shadow:0 0 6px rgba(0,212,255,.5);}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:13px;height:13px;background:var(--accent);border-radius:50%;cursor:pointer;box-shadow:0 0 6px rgba(57,255,133,.5);}
   .rrow{display:flex;justify-content:space-between;font-size:.58rem;color:var(--muted);margin-top:3px;}
-  .va{color:var(--accent);}
-  .vb{color:var(--accent2);}
-  .vc{color:var(--purple);}
-  .vd{color:var(--green);}
-  .ve{color:var(--yellow);}
-  .vr{color:var(--red);}
+  .va{color:var(--accent);} .vb{color:var(--blue);} .vc{color:var(--purple);}
+  .vd{color:var(--accent2);} .ve{color:var(--yellow);} .vr{color:var(--red);}
 
-  /* LUFS section */
-  .lufs-card{
-    background:var(--panel);border:1px solid rgba(255,68,102,.35);
-    border-radius:8px;padding:13px 15px;margin-top:6px;
-  }
-  .lufs-header{
-    display:flex;align-items:center;gap:10px;margin-bottom:10px;
-  }
+  /* ── LUFS CARD ── */
+  .lufs-card{background:var(--panel);border:1px solid rgba(255,68,102,.35);border-radius:8px;padding:13px 15px;margin-top:6px;}
+  .lufs-header{display:flex;align-items:center;gap:10px;margin-bottom:10px;}
   .lufs-header .icon{font-size:1.1rem;}
   .lufs-header .title{font-family:'Orbitron',sans-serif;font-size:.72rem;color:var(--red);letter-spacing:.1em;}
   .lufs-header .sub{font-size:.62rem;color:var(--muted);margin-left:auto;}
   .lufs-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;}
   .lufs-field label{font-size:.6rem;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;display:block;margin-bottom:5px;}
-  .lufs-field select,.lufs-field input[type=range]{width:100%;background:var(--bg);border:1px solid var(--border);color:var(--text);font-family:'Share Tech Mono',monospace;font-size:.74rem;padding:6px 8px;border-radius:5px;outline:none;appearance:none;cursor:pointer;}
-  .lufs-meter{
-    margin-top:10px;height:6px;background:var(--border);border-radius:3px;overflow:hidden;
-  }
-  .lufs-fill{height:100%;width:0%;border-radius:3px;transition:width 0.4s,background 0.3s;background:linear-gradient(90deg,var(--green),var(--yellow),var(--red));}
+  .lufs-field input[type=range]{width:100%;background:var(--bg);border:1px solid var(--border);color:var(--text);font-family:'Share Tech Mono',monospace;font-size:.74rem;padding:6px 8px;border-radius:5px;outline:none;appearance:none;cursor:pointer;}
+  .lufs-meter{margin-top:10px;height:6px;background:var(--border);border-radius:3px;overflow:hidden;}
+  .lufs-fill{height:100%;width:0%;border-radius:3px;transition:width .4s,background .3s;background:linear-gradient(90deg,var(--accent),var(--yellow),var(--red));}
 
-  /* toggles */
+  /* ── TOGGLES ── */
   .tgrid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:7px;margin-top:6px;}
   .ti{display:flex;align-items:center;gap:9px;background:var(--panel);border:1px solid var(--border);border-radius:7px;padding:9px 11px;cursor:pointer;transition:border-color .2s;}
   .ti:hover{border-color:var(--muted);}
-  .ti.on{border-color:rgba(0,212,255,.32);}
+  .ti.on{border-color:rgba(57,255,133,.32);}
   .ti-txt{font-size:.64rem;color:var(--muted);letter-spacing:.05em;line-height:1.4;}
   .ti.on .ti-txt{color:var(--text);}
   .sw{width:28px;height:15px;border-radius:8px;background:var(--border);position:relative;flex-shrink:0;transition:background .22s;}
   .sw::after{content:'';position:absolute;top:2px;left:2px;width:11px;height:11px;border-radius:50%;background:var(--muted);transition:left .22s,background .22s;}
-  .ti.on .sw{background:rgba(0,212,255,.22);}
+  .ti.on .sw{background:rgba(57,255,133,.22);}
   .ti.on .sw::after{left:15px;background:var(--accent);}
 
+  /* ── PATH INPUTS ── */
   .path-row{display:flex;gap:7px;align-items:center;}
   .path-row input,.path-inp{flex:1;background:var(--panel);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:'Share Tech Mono',monospace;font-size:.72rem;padding:8px 11px;outline:none;transition:border-color .2s;width:100%;}
   .path-row input:focus,.path-inp:focus{border-color:var(--accent);}
   .path-hint{font-size:.61rem;color:var(--muted);margin-top:4px;}
 
-  #runBtn{
-    margin-top:20px;width:100%;padding:14px;
-    background:transparent;border:1.5px solid var(--accent);
-    border-radius:8px;color:var(--accent);
-    font-family:'Orbitron',sans-serif;font-size:.8rem;letter-spacing:.2em;text-transform:uppercase;
-    cursor:pointer;position:relative;overflow:hidden;transition:background .2s,box-shadow .2s;
-  }
-  #runBtn:hover{background:rgba(0,212,255,.07);box-shadow:0 0 24px rgba(0,212,255,.28);}
+  /* ── RUN BUTTON ── */
+  #runBtn{margin-top:20px;width:100%;padding:14px;background:transparent;border:1.5px solid var(--accent);border-radius:8px;color:var(--accent);font-family:'Orbitron',sans-serif;font-size:.8rem;letter-spacing:.2em;text-transform:uppercase;cursor:pointer;position:relative;overflow:hidden;transition:background .2s,box-shadow .2s;}
+  #runBtn:hover{background:rgba(57,255,133,.07);box-shadow:0 0 24px rgba(57,255,133,.28);}
   #runBtn:active{transform:scale(.99);}
   #runBtn:disabled{border-color:var(--muted);color:var(--muted);cursor:default;box-shadow:none;}
-  .scan{position:absolute;top:0;left:-100%;width:100%;height:100%;background:linear-gradient(90deg,transparent,rgba(0,212,255,.13),transparent);animation:sc 2s linear infinite;pointer-events:none;}
+  .scan{position:absolute;top:0;left:-100%;width:100%;height:100%;background:linear-gradient(90deg,transparent,rgba(57,255,133,.12),transparent);animation:sc 2s linear infinite;pointer-events:none;}
   @keyframes sc{to{left:100%;}}
 
+  /* ── STATUS / PROGRESS ── */
   .status-bar{margin-top:12px;display:flex;align-items:center;gap:9px;font-size:.7rem;}
   .sdot{width:8px;height:8px;border-radius:50%;background:var(--muted);flex-shrink:0;transition:background .3s;}
   .sdot.running{background:var(--yellow);animation:blink .7s step-start infinite;}
-  .sdot.done{background:var(--green);box-shadow:0 0 8px var(--green);}
+  .sdot.done{background:var(--accent);box-shadow:0 0 8px var(--accent);}
   .sdot.error{background:#ff4444;}
   @keyframes blink{50%{opacity:0;}}
   #stxt{color:var(--yellow);}
-  #stxt.done{color:var(--green);}
+  #stxt.done{color:var(--accent);}
   #stxt.error{color:#ff4444;}
   .prog-wrap{margin-top:7px;height:3px;background:var(--border);border-radius:2px;overflow:hidden;display:none;}
-  .prog-fill{height:100%;width:40%;background:linear-gradient(90deg,var(--accent),var(--green));border-radius:2px;animation:slide 1.2s linear infinite;}
+  .prog-fill{height:100%;width:40%;background:linear-gradient(90deg,var(--accent),var(--blue));border-radius:2px;animation:slide 1.2s linear infinite;}
   @keyframes slide{0%{transform:translateX(-200%);}100%{transform:translateX(350%);}}
 
-  #output{margin-top:12px;background:#040609;border:1px solid var(--border);border-radius:8px;padding:13px 15px;font-size:.68rem;color:var(--green);white-space:pre-wrap;word-break:break-all;max-height:240px;overflow-y:auto;display:none;line-height:1.65;}
+  /* ── LOG ── */
+  #output{margin-top:12px;background:#030806;border:1px solid var(--border);border-radius:8px;padding:13px 15px;font-size:.68rem;color:var(--accent);white-space:pre-wrap;word-break:break-all;max-height:260px;overflow-y:auto;display:none;line-height:1.65;}
   #output::-webkit-scrollbar{width:4px;}
   #output::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px;}
-
-  .info-box{margin-top:10px;background:rgba(0,212,255,.03);border:1px solid rgba(0,212,255,.15);border-radius:7px;padding:11px 14px;font-size:.66rem;color:#7aaabb;line-height:1.8;}
-  .info-box strong{color:var(--accent);}
 
   hr{border:none;border-top:1px solid var(--border);margin:20px 0 0;}
   footer{margin-top:22px;display:flex;justify-content:space-between;align-items:center;font-size:.58rem;color:var(--muted);border-top:1px solid var(--border);padding-top:12px;}
@@ -187,104 +179,158 @@
 <div class="wrapper">
 
   <header>
-    <div class="logo">⬇</div>
+    <div class="logo">⬆</div>
     <div class="htxt">
-      <h1>7.1 → Stereo · Full Preservation Downmix</h1>
-      <p>All Channels · Background Instruments · Spatial Cues · LUFS Limiter</p>
+      <h1>Stereo → 7.1 Upmixer · Full Detail Preservation</h1>
+      <p>Additive Reconstruction · No Cancellation · All Instruments Preserved · LUFS Limiter</p>
     </div>
-    <div class="badge">DOWN v3</div>
-    <div class="badge2">LOSSLESS</div>
+    <div class="badge">UP v3</div>
+    <div class="badge2">7.1 OUT</div>
   </header>
 
-  <div class="slbl">Input File — 7.1 / Dolby Atmos</div>
+  <!-- INPUT -->
+  <div class="slbl">Input File — Stereo (from Full Preservation Downmixer)</div>
   <div id="dropzone">
     <span class="dz-icon">📂</span>
-    <div class="dz-main">Drag & Drop 7.1 / Atmos File</div>
-    <div class="dz-sub">FLAC · WAV · MKV · TrueHD · DTS-MA · MP4 — all channels will be preserved</div>
+    <div class="dz-main">Drag & Drop Stereo FLAC / WAV</div>
+    <div class="dz-sub">Use the "Stereo-Full" file output by the v3 Downmixer for best reconstruction</div>
   </div>
-  <input type="file" id="fileInput" hidden accept="audio/*,video/*,.flac,.wav,.mkv,.mp4,.truehd,.dts">
+  <input type="file" id="fileInput" hidden accept="audio/*,.flac,.wav,.aiff">
   <div id="fileInfo"></div>
 
-  <div class="slbl">Input Channel Map</div>
-  <div class="ch-grid" id="channelMap">
-    <div class="ch" id="ch-FL"><div class="lbl">FL</div><div class="dot">◈</div><div class="role">Front L</div></div>
-    <div class="ch" id="ch-FC"><div class="lbl">FC</div><div class="dot">◈</div><div class="role">Centre</div></div>
-    <div class="ch" id="ch-FR"><div class="lbl">FR</div><div class="dot">◈</div><div class="role">Front R</div></div>
-    <div class="ch" id="ch-LFE"><div class="lbl">LFE</div><div class="dot">◉</div><div class="role">Sub</div></div>
-    <div class="ch" id="ch-SL"><div class="lbl">SL</div><div class="dot">◈</div><div class="role">Side L</div></div>
-    <div class="ch" id="ch-SR"><div class="lbl">SR</div><div class="dot">◈</div><div class="role">Side R</div></div>
-    <div class="ch" id="ch-BL"><div class="lbl">BL</div><div class="dot">◈</div><div class="role">Rear L</div></div>
-    <div class="ch" id="ch-BR"><div class="lbl">BR</div><div class="dot">◈</div><div class="role">Rear R</div></div>
-    <div class="ch out"><div class="lbl">OUT L</div><div class="dot">▶</div><div class="role">Stereo L</div></div>
-    <div class="ch out"><div class="lbl">OUT R</div><div class="dot">▶</div><div class="role">Stereo R</div></div>
+  <!-- OUTPUT CHANNEL MAP -->
+  <div class="slbl">Output Channel Assignment</div>
+  <div class="ch-grid">
+    <div class="ch front"><div class="lbl">FL</div><div class="dot">⬡</div><div class="role">PASSTHRU</div></div>
+    <div class="ch center"><div class="lbl">FC</div><div class="dot">M</div><div class="role">MID EXTRACT</div></div>
+    <div class="ch front"><div class="lbl">FR</div><div class="dot">⬡</div><div class="role">PASSTHRU</div></div>
+    <div class="ch lfe-ch"><div class="lbl">LFE</div><div class="dot">◉</div><div class="role">SUB EXTRACT</div></div>
+    <div class="ch side-s"><div class="lbl">SL</div><div class="dot">≋</div><div class="role">MID+WIDE+REV</div></div>
+    <div class="ch side-s"><div class="lbl">SR</div><div class="dot">≋</div><div class="role">MID+WIDE+REV</div></div>
+    <div class="ch rear-s"><div class="lbl">BL</div><div class="dot">↩</div><div class="role">MID+DLY+DARK</div></div>
+    <div class="ch rear-s"><div class="lbl">BR</div><div class="dot">↩</div><div class="role">MID+DLY+DARK</div></div>
+    <div class="ch" style="border-color:rgba(255,204,0,.2);background:rgba(255,204,0,.02);">
+      <div class="lbl" style="color:var(--yellow)">7.1</div>
+      <div class="dot" style="background:rgba(255,204,0,.12);color:var(--yellow)">OUT</div>
+      <div class="role">INTERLEAVED</div>
+    </div>
+    <div class="ch" style="border-color:transparent;"></div>
   </div>
 
-  <!-- MIX PATH DIAGRAM -->
-  <div class="slbl">Mix Formula — All Channels Included</div>
-  <div class="mix-diagram">
-    <div class="row">
-      <span style="color:var(--text)">OUT L =</span>
-      <span class="ch-tag ct-fl">FL×1.0</span><span class="arrow">+</span>
-      <span class="ch-tag ct-fc">FC×0.707</span><span class="arrow">+</span>
-      <span class="ch-tag ct-lfe">LFE×0.40</span><span class="arrow">+</span>
-      <span class="ch-tag ct-sl">SL×0.707</span><span class="arrow">+</span>
-      <span class="ch-tag ct-bl">BL×0.650</span>
-    </div>
-    <div class="row" style="margin-top:6px">
-      <span style="color:var(--text)">OUT R =</span>
-      <span class="ch-tag ct-fl">FR×1.0</span><span class="arrow">+</span>
-      <span class="ch-tag ct-fc">FC×0.707</span><span class="arrow">+</span>
-      <span class="ch-tag ct-lfe">LFE×0.40</span><span class="arrow">+</span>
-      <span class="ch-tag ct-sl">SR×0.707</span><span class="arrow">+</span>
-      <span class="ch-tag ct-bl">BR×0.650</span>
-    </div>
-    <div style="margin-top:8px;font-size:.61rem;color:var(--muted)">
-      + <span style="color:var(--purple)">Detail recovery pass</span>: quiet/mid-panned background content re-extracted and blended back at full level before any limiting.
-    </div>
+  <div class="legend">
+    <div class="leg front"><div class="leg-dot"></div>FL/FR — original stereo, bit-perfect copy</div>
+    <div class="leg center"><div class="leg-dot"></div>FC — Mid = (L+R)/2, voice band</div>
+    <div class="leg lfe"><div class="leg-dot"></div>LFE — low-shelf sub extract + boost</div>
+    <div class="leg side"><div class="leg-dot"></div>SL/SR — additive mid+detail+width+reverb</div>
+    <div class="leg rear"><div class="leg-dot"></div>BL/BR — additive mid+delay+dark EQ</div>
   </div>
 
+  <!-- WHY IT'S FIXED -->
   <div class="info-box">
-    <strong>Why the old version lost background instruments:</strong> The side-channel encoding approach
-    used <code>(L−R)/2</code> to carry spatial data — but instruments panned near centre have nearly
-    equal L/R energy, so they cancel out in the side signal and disappear.
-    This version uses a <strong>full additive fold</strong> — every channel is summed with
-    equal-power coefficients so nothing is ever subtracted or cancelled.
-    A separate <strong>detail recovery pass</strong> re-extracts quiet mid-panned content
-    and blends it back at 100% level before any processing touches it.
+    <strong>Why the old version lost instruments — and what's fixed:</strong><br>
+    The old upmixer used <code>(L−R)/2</code> as the source for ALL surround and rear channels.
+    Any instrument panned centre or near-centre has almost equal L and R energy —
+    so <code>L−R ≈ 0</code> and those instruments <strong>completely disappeared</strong> from every surround channel.<br><br>
+    <span class="note">New approach — fully additive, zero cancellation:</span><br>
+    • <strong>SL/SR and BL/BR</strong> are now built from the <strong>full stereo Mid signal</strong> <code>(L+R)/2</code>
+      — this contains <em>every</em> instrument including centre-panned backgrounds.<br>
+    • Width and spatial feel is added <em>on top</em> via delay, reverb, and EQ — never by subtraction.<br>
+    • A separate <strong>detail recovery layer</strong> blends extra quiet-content back into all channels additively.<br>
+    • <strong>FL/FR are a bit-perfect copy</strong> — zero processing, zero coloration.
   </div>
 
-  <!-- MIX COEFFICIENTS -->
-  <div class="slbl">Channel Mix Coefficients</div>
+  <!-- CHANNEL LEVELS -->
+  <div class="slbl">Channel Reconstruction Levels</div>
   <div class="opts">
     <div class="card">
-      <label>FC Centre Level  <span class="ve" id="fcVal">70.7%</span></label>
-      <input type="range" id="fcSlider" min="0" max="100" step="1" value="70.7">
-      <div class="rrow"><span>Silent</span><span>Full (−0dB)</span></div>
+      <label>FC Centre Level  <span class="ve" id="fcVal">65%</span></label>
+      <input type="range" id="fcSlider" min="0" max="100" step="5" value="65">
+      <div class="rrow"><span>Silent</span><span>Full</span></div>
     </div>
     <div class="card">
-      <label>LFE Sub Level  <span class="vb" id="lfeVal">40%</span></label>
-      <input type="range" id="lfeSlider" min="0" max="100" step="5" value="40">
+      <label>LFE Sub Level  <span class="vd" id="lfeVal">90%</span></label>
+      <input type="range" id="lfeSlider" min="0" max="130" step="5" value="90">
+      <div class="rrow"><span>Off</span><span>Boost (+30%)</span></div>
+    </div>
+    <div class="card">
+      <label>SL/SR Surround Level  <span class="vc" id="slVal">60%</span></label>
+      <input type="range" id="slSlider" min="0" max="100" step="5" value="60">
       <div class="rrow"><span>Off</span><span>Full</span></div>
     </div>
     <div class="card">
-      <label>SL/SR Surround Level  <span class="vc" id="slVal">70.7%</span></label>
-      <input type="range" id="slSlider" min="0" max="100" step="1" value="70.7">
+      <label>BL/BR Rear Level  <span class="va" id="blVal">50%</span></label>
+      <input type="range" id="blSlider" min="0" max="100" step="5" value="50">
       <div class="rrow"><span>Off</span><span>Full</span></div>
     </div>
     <div class="card">
-      <label>BL/BR Rear Level  <span class="vd" id="blVal">65%</span></label>
-      <input type="range" id="blSlider" min="0" max="100" step="5" value="65">
-      <div class="rrow"><span>Off</span><span>Full</span></div>
-    </div>
-    <div class="card">
-      <label>Detail Recovery Blend  <span class="va" id="drVal">30%</span></label>
-      <input type="range" id="drSlider" min="0" max="60" step="5" value="30">
+      <label>Detail Recovery Blend  <span class="vb" id="drVal">25%</span></label>
+      <input type="range" id="drSlider" min="0" max="60" step="5" value="25">
       <div class="rrow"><span>Off</span><span>Heavy</span></div>
     </div>
     <div class="card">
-      <label>Stereo Width (extrastereo)  <span class="va" id="xsVal">1.10×</span></label>
-      <input type="range" id="xsSlider" min="0.8" max="1.8" step="0.05" value="1.10">
-      <div class="rrow"><span>Narrow</span><span>Wide</span></div>
+      <label>Rear Delay  <span class="va" id="rearVal">14 ms</span></label>
+      <input type="range" id="rearSlider" min="6" max="32" step="2" value="14">
+      <div class="rrow"><span>6 ms</span><span>32 ms</span></div>
+    </div>
+  </div>
+
+  <!-- SPATIAL OPTIONS -->
+  <div class="slbl">Spatial Expansion</div>
+  <div class="opts">
+    <div class="card">
+      <label>Surround Reverb Tail  <span class="vb" id="revVal">50%</span></label>
+      <input type="range" id="revSlider" min="0" max="100" step="5" value="50">
+      <div class="rrow"><span>Dry</span><span>Lush</span></div>
+    </div>
+    <div class="card">
+      <label>Rear Reverb Diffusion  <span class="va" id="rev2Val">40%</span></label>
+      <input type="range" id="rev2Slider" min="0" max="100" step="5" value="40">
+      <div class="rrow"><span>Dry</span><span>Diffuse</span></div>
+    </div>
+    <div class="card">
+      <label>Surround Width (extrastereo)  <span class="va" id="xsVal">1.15×</span></label>
+      <input type="range" id="xsSlider" min="0.8" max="2.0" step="0.05" value="1.15">
+      <div class="rrow"><span>0.8×</span><span>2.0×</span></div>
+    </div>
+    <div class="card">
+      <label>Haas ITD Surround (ms)  <span class="vb" id="haasVal">1.5 ms</span></label>
+      <input type="range" id="haasSlider" min="0" max="4" step="0.5" value="1.5">
+      <div class="rrow"><span>Off</span><span>4 ms</span></div>
+    </div>
+  </div>
+
+  <!-- PER-CHANNEL EQ -->
+  <div class="slbl">Per-Channel Detail EQ</div>
+  <div class="opts3">
+    <div class="card">
+      <label>LFE Sub Shelf 45 Hz  <span class="vd" id="leq1Val">+3.0 dB</span></label>
+      <input type="range" id="leq1Slider" min="0" max="8" step="0.5" value="3.0">
+      <div class="rrow"><span>0</span><span>+8 dB</span></div>
+    </div>
+    <div class="card">
+      <label>SL/SR Presence 3.5kHz  <span class="vc" id="seq1Val">+1.0 dB</span></label>
+      <input type="range" id="seq1Slider" min="-3" max="4" step="0.5" value="1.0">
+      <div class="rrow"><span>−3</span><span>+4 dB</span></div>
+    </div>
+    <div class="card">
+      <label>SL/SR Air 10kHz  <span class="vc" id="seq2Val">+1.2 dB</span></label>
+      <input type="range" id="seq2Slider" min="-3" max="4" step="0.5" value="1.2">
+      <div class="rrow"><span>−3</span><span>+4 dB</span></div>
+    </div>
+    <div class="card">
+      <label>BL/BR Warmth 120Hz  <span class="va" id="beq1Val">+1.5 dB</span></label>
+      <input type="range" id="beq1Slider" min="-3" max="5" step="0.5" value="1.5">
+      <div class="rrow"><span>−3</span><span>+5 dB</span></div>
+    </div>
+    <div class="card">
+      <label>BL/BR Mud Cut 300Hz  <span class="va" id="beq2Val">−0.8 dB</span></label>
+      <input type="range" id="beq2Slider" min="-5" max="2" step="0.5" value="-0.8">
+      <div class="rrow"><span>−5</span><span>+2 dB</span></div>
+    </div>
+    <div class="card">
+      <label>BL/BR HF Roll 8kHz  <span class="va" id="beq3Val">−2.0 dB</span></label>
+      <input type="range" id="beq3Slider" min="-6" max="0" step="0.5" value="-2.0">
+      <div class="rrow"><span>−6</span><span>0 dB</span></div>
     </div>
   </div>
 
@@ -294,13 +340,13 @@
     <div class="lufs-header">
       <span class="icon">🔊</span>
       <span class="title">Integrated Loudness Limiter</span>
-      <span class="sub">EBU R128 · ITU-R BS.1770 · True Peak</span>
+      <span class="sub">EBU R128 · ITU-R BS.1770 · True Peak · Per-Channel</span>
     </div>
     <div class="lufs-grid">
       <div class="lufs-field">
         <label>Target LUFS  <span class="vr" id="lufsVal">−14 LUFS</span></label>
         <input type="range" id="lufsSlider" min="-24" max="-6" step="1" value="-14">
-        <div class="rrow"><span>−24 (quiet)</span><span>−6 (loud)</span></div>
+        <div class="rrow"><span>−24 quiet</span><span>−6 loud</span></div>
       </div>
       <div class="lufs-field">
         <label>True Peak Ceiling  <span class="vr" id="tpVal">−1.0 dBTP</span></label>
@@ -308,83 +354,37 @@
         <div class="rrow"><span>−3 dBTP</span><span>0 dBTP</span></div>
       </div>
       <div class="lufs-field">
-        <label>LRA Range  <span class="va" id="lraVal">11 LU</span></label>
+        <label>LRA Dynamic Range  <span class="va" id="lraVal">11 LU</span></label>
         <input type="range" id="lraSlider" min="4" max="20" step="1" value="11">
-        <div class="rrow"><span>4 (dense)</span><span>20 (dynamic)</span></div>
+        <div class="rrow"><span>4 dense</span><span>20 open</span></div>
       </div>
     </div>
-    <div class="lufs-meter" id="lufsMeter">
-      <div class="lufs-fill" id="lufsFill"></div>
-    </div>
-    <div style="font-size:.6rem;color:var(--muted);margin-top:5px;">
-      Loudness target: <span class="vr" id="lufsDisplay">−14 LUFS</span> · True Peak: <span class="vr" id="tpDisplay">−1.0 dBTP</span> · Dynamic range: <span class="va" id="lraDisplay">11 LU</span>
-      <span style="margin-left:12px;color:var(--muted)">Presets:</span>
-      <span class="preset" onclick="setLufsPreset(-14,-1,11)" style="cursor:pointer;color:var(--accent);margin-left:8px;">Streaming</span>
-      <span class="preset" onclick="setLufsPreset(-9,-0.5,8)" style="cursor:pointer;color:var(--yellow);margin-left:8px;">Loud Master</span>
-      <span class="preset" onclick="setLufsPreset(-18,-1,13)" style="cursor:pointer;color:var(--green);margin-left:8px;">Film/TV</span>
-      <span class="preset" onclick="setLufsPreset(-23,-1,20)" style="cursor:pointer;color:var(--purple);margin-left:8px;">Broadcast</span>
-    </div>
-  </div>
-
-  <!-- DETAIL EQ -->
-  <div class="slbl">Detail Preservation EQ</div>
-  <div class="opts3">
-    <div class="card">
-      <label>Sub Shelf 40 Hz  <span class="vb" id="eq1Val">+2.0 dB</span></label>
-      <input type="range" id="eq1Slider" min="-3" max="6" step="0.5" value="2.0">
-      <div class="rrow"><span>−3</span><span>+6 dB</span></div>
-    </div>
-    <div class="card">
-      <label>Mud Cut 250 Hz  <span class="va" id="eq2Val">−1.0 dB</span></label>
-      <input type="range" id="eq2Slider" min="-6" max="3" step="0.5" value="-1.0">
-      <div class="rrow"><span>−6</span><span>+3 dB</span></div>
-    </div>
-    <div class="card">
-      <label>Presence 3.5 kHz  <span class="va" id="eq3Val">+1.0 dB</span></label>
-      <input type="range" id="eq3Slider" min="-4" max="4" step="0.5" value="1.0">
-      <div class="rrow"><span>−4</span><span>+4 dB</span></div>
-    </div>
-    <div class="card">
-      <label>Hi Presence 8 kHz  <span class="va" id="eq4Val">+1.0 dB</span></label>
-      <input type="range" id="eq4Slider" min="-4" max="4" step="0.5" value="1.0">
-      <div class="rrow"><span>−4</span><span>+4 dB</span></div>
-    </div>
-    <div class="card">
-      <label>Air Shelf 14 kHz  <span class="va" id="eq5Val">+1.5 dB</span></label>
-      <input type="range" id="eq5Slider" min="-4" max="5" step="0.5" value="1.5">
-      <div class="rrow"><span>−4</span><span>+5 dB</span></div>
-    </div>
-    <div class="card">
-      <label>Harsh Notch 2.2kHz  <span class="va" id="eq6Val">−1.5 dB</span></label>
-      <input type="range" id="eq6Slider" min="-6" max="0" step="0.5" value="-1.5">
-      <div class="rrow"><span>−6</span><span>0 dB</span></div>
+    <div class="lufs-meter"><div class="lufs-fill" id="lufsFill"></div></div>
+    <div style="font-size:.6rem;color:var(--muted);margin-top:6px;">
+      Target: <span class="vr" id="lufsDisplay">−14 LUFS</span> · Peak: <span class="vr" id="tpDisplay">−1.0 dBTP</span> · Range: <span class="va" id="lraDisplay">11 LU</span>
+      &nbsp;·&nbsp; Presets:
+      <span onclick="setLufsPreset(-14,-1,11)"  style="cursor:pointer;color:var(--blue);  margin-left:6px;">Streaming</span>
+      <span onclick="setLufsPreset(-9,-0.5,8)"  style="cursor:pointer;color:var(--yellow);margin-left:6px;">Loud Master</span>
+      <span onclick="setLufsPreset(-18,-1,13)"  style="cursor:pointer;color:var(--accent);margin-left:6px;">Film/TV</span>
+      <span onclick="setLufsPreset(-23,-1,20)"  style="cursor:pointer;color:var(--purple);margin-left:6px;">Broadcast</span>
     </div>
   </div>
 
   <!-- PROCESSING MODULES -->
   <div class="slbl">Processing Modules</div>
   <div class="tgrid">
-    <div class="ti on" id="tog-fold" onclick="toggle(this)">
-      <div class="sw"></div><div class="ti-txt">Full Channel<br>Fold Mix</div>
-    </div>
-    <div class="ti on" id="tog-detail" onclick="toggle(this)">
-      <div class="sw"></div><div class="ti-txt">Background<br>Detail Recovery</div>
-    </div>
-    <div class="ti on" id="tog-haas" onclick="toggle(this)">
-      <div class="sw"></div><div class="ti-txt">Haas ITD<br>Surround Cue</div>
-    </div>
-    <div class="ti on" id="tog-eq" onclick="toggle(this)">
-      <div class="sw"></div><div class="ti-txt">Detail<br>Preserve EQ</div>
-    </div>
-    <div class="ti on" id="tog-lufs" onclick="toggle(this)">
-      <div class="sw"></div><div class="ti-txt">LUFS<br>Limiter</div>
-    </div>
-    <div class="ti on" id="tog-dc" onclick="toggle(this)">
-      <div class="sw"></div><div class="ti-txt">DC Offset<br>Remove</div>
-    </div>
+    <div class="ti on"  id="tog-fc"     onclick="toggle(this)"><div class="sw"></div><div class="ti-txt">FC Mid<br>Reconstruct</div></div>
+    <div class="ti on"  id="tog-lfe"    onclick="toggle(this)"><div class="sw"></div><div class="ti-txt">LFE Sub<br>Reconstruct</div></div>
+    <div class="ti on"  id="tog-surr"   onclick="toggle(this)"><div class="sw"></div><div class="ti-txt">SL/SR Surround<br>Additive Mix</div></div>
+    <div class="ti on"  id="tog-rear"   onclick="toggle(this)"><div class="sw"></div><div class="ti-txt">BL/BR Rear<br>Delay Mix</div></div>
+    <div class="ti on"  id="tog-detail" onclick="toggle(this)"><div class="sw"></div><div class="ti-txt">Background<br>Detail Recover</div></div>
+    <div class="ti on"  id="tog-rev"    onclick="toggle(this)"><div class="sw"></div><div class="ti-txt">Reverb<br>Expansion</div></div>
+    <div class="ti on"  id="tog-eq"     onclick="toggle(this)"><div class="sw"></div><div class="ti-txt">Per-Channel<br>Detail EQ</div></div>
+    <div class="ti on"  id="tog-lufs"   onclick="toggle(this)"><div class="sw"></div><div class="ti-txt">LUFS<br>Limiter</div></div>
+    <div class="ti on"  id="tog-dc"     onclick="toggle(this)"><div class="sw"></div><div class="ti-txt">DC Offset<br>Remove</div></div>
   </div>
 
-  <!-- FFMPEG -->
+  <!-- OUTPUT SETTINGS -->
   <div class="slbl">Output Settings</div>
   <div class="opts">
     <div class="card">
@@ -416,67 +416,66 @@
 
   <div class="slbl">Output Directory (optional)</div>
   <input class="path-inp" type="text" id="outDir" placeholder="Leave blank — saves alongside source">
-  <div class="path-hint">Output tagged: filename + " - Stereo-Full.flac"</div>
+  <div class="path-hint">Output tagged: filename + " - 7.1-Upmix.flac"</div>
 
   <button id="runBtn" onclick="run()">
     <div class="scan"></div>
-    ▶&nbsp;&nbsp;Run Full Preservation Downmix
+    ▶&nbsp;&nbsp;Run Full Detail Upmix → 7.1
   </button>
 
   <div class="status-bar">
     <div class="sdot idle" id="sdot"></div>
-    <span id="stxt">Idle — load a 7.1 file to begin</span>
+    <span id="stxt">Idle — load a stereo file to begin</span>
   </div>
   <div class="prog-wrap" id="progWrap"><div class="prog-fill"></div></div>
   <pre id="output"></pre>
 
   <hr>
   <footer>
-    <span>7.1 → STEREO FULL PRESERVATION DOWNMIXER v3 · Electron / FFmpeg</span>
+    <span>STEREO → 7.1 FULL DETAIL UPMIXER v3 · Electron / FFmpeg</span>
     <span id="bstamp"></span>
   </footer>
 </div>
 
 <script>
+'use strict';
 let filePath = '';
-const CHANNELS = ['FL','FC','FR','LFE','SL','SR','BL','BR'];
 
 // ── Slider bindings ──────────────────────────────────────────────────────────
-const sliders = [
-  ['fcSlider',   'fcVal',   v => parseFloat(v).toFixed(1) + '%'],
-  ['lfeSlider',  'lfeVal',  v => v + '%'],
-  ['slSlider',   'slVal',   v => parseFloat(v).toFixed(1) + '%'],
-  ['blSlider',   'blVal',   v => v + '%'],
-  ['drSlider',   'drVal',   v => v + '%'],
+const SLIDERS = [
+  ['fcSlider',   'fcVal',   v => Math.round(v) + '%'],
+  ['lfeSlider',  'lfeVal',  v => Math.round(v) + '%'],
+  ['slSlider',   'slVal',   v => Math.round(v) + '%'],
+  ['blSlider',   'blVal',   v => Math.round(v) + '%'],
+  ['drSlider',   'drVal',   v => Math.round(v) + '%'],
+  ['rearSlider', 'rearVal', v => v + ' ms'],
+  ['revSlider',  'revVal',  v => Math.round(v) + '%'],
+  ['rev2Slider', 'rev2Val', v => Math.round(v) + '%'],
   ['xsSlider',   'xsVal',   v => parseFloat(v).toFixed(2) + '×'],
-  ['eq1Slider',  'eq1Val',  v => (parseFloat(v) >= 0 ? '+' : '') + parseFloat(v).toFixed(1) + ' dB'],
-  ['eq2Slider',  'eq2Val',  v => (parseFloat(v) >= 0 ? '+' : '') + parseFloat(v).toFixed(1) + ' dB'],
-  ['eq3Slider',  'eq3Val',  v => (parseFloat(v) >= 0 ? '+' : '') + parseFloat(v).toFixed(1) + ' dB'],
-  ['eq4Slider',  'eq4Val',  v => (parseFloat(v) >= 0 ? '+' : '') + parseFloat(v).toFixed(1) + ' dB'],
-  ['eq5Slider',  'eq5Val',  v => (parseFloat(v) >= 0 ? '+' : '') + parseFloat(v).toFixed(1) + ' dB'],
-  ['eq6Slider',  'eq6Val',  v => (parseFloat(v) >= 0 ? '+' : '') + parseFloat(v).toFixed(1) + ' dB'],
+  ['haasSlider', 'haasVal', v => parseFloat(v).toFixed(1) + ' ms'],
+  ['leq1Slider', 'leq1Val', v => (parseFloat(v)>=0?'+':'') + parseFloat(v).toFixed(1) + ' dB'],
+  ['seq1Slider', 'seq1Val', v => (parseFloat(v)>=0?'+':'') + parseFloat(v).toFixed(1) + ' dB'],
+  ['seq2Slider', 'seq2Val', v => (parseFloat(v)>=0?'+':'') + parseFloat(v).toFixed(1) + ' dB'],
+  ['beq1Slider', 'beq1Val', v => (parseFloat(v)>=0?'+':'') + parseFloat(v).toFixed(1) + ' dB'],
+  ['beq2Slider', 'beq2Val', v => (parseFloat(v)>=0?'+':'') + parseFloat(v).toFixed(1) + ' dB'],
+  ['beq3Slider', 'beq3Val', v => (parseFloat(v)>=0?'+':'') + parseFloat(v).toFixed(1) + ' dB'],
   ['lufsSlider', 'lufsVal', v => v + ' LUFS'],
   ['tpSlider',   'tpVal',   v => parseFloat(v).toFixed(1) + ' dBTP'],
   ['lraSlider',  'lraVal',  v => v + ' LU'],
 ];
-sliders.forEach(([id, vid, fmt]) => {
-  const el = document.getElementById(id);
-  el.addEventListener('input', function () {
+SLIDERS.forEach(([id, vid, fmt]) => {
+  document.getElementById(id).addEventListener('input', function () {
     document.getElementById(vid).textContent = fmt(this.value);
-    if (id === 'lufsSlider') {
-      document.getElementById('lufsDisplay').textContent = this.value + ' LUFS';
-      updateLufsMeter();
-    }
-    if (id === 'tpSlider')  document.getElementById('tpDisplay').textContent  = parseFloat(this.value).toFixed(1) + ' dBTP';
-    if (id === 'lraSlider') document.getElementById('lraDisplay').textContent = this.value + ' LU';
+    if (id === 'lufsSlider') { document.getElementById('lufsDisplay').textContent = this.value + ' LUFS'; updateLufsMeter(); }
+    if (id === 'tpSlider')   document.getElementById('tpDisplay').textContent = parseFloat(this.value).toFixed(1) + ' dBTP';
+    if (id === 'lraSlider')  document.getElementById('lraDisplay').textContent = this.value + ' LU';
   });
 });
 
 function updateLufsMeter() {
-  const val  = parseFloat(document.getElementById('lufsSlider').value); // -24 to -6
-  const pct  = ((val - (-24)) / ((-6) - (-24))) * 100;
-  const fill = document.getElementById('lufsFill');
-  fill.style.width = pct + '%';
+  const val = parseFloat(document.getElementById('lufsSlider').value);
+  const pct = ((val - (-24)) / ((-6) - (-24))) * 100;
+  document.getElementById('lufsFill').style.width = pct + '%';
 }
 updateLufsMeter();
 
@@ -497,8 +496,8 @@ function setLufsPreset(lufs, tp, lra) {
 const dz = document.getElementById('dropzone');
 const fi = document.getElementById('fileInput');
 dz.onclick = () => fi.click();
-dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('drag-over'); });
-dz.addEventListener('dragleave', () => dz.classList.remove('drag-over'));
+dz.addEventListener('dragover',  e => { e.preventDefault(); dz.classList.add('drag-over'); });
+dz.addEventListener('dragleave', ()  => dz.classList.remove('drag-over'));
 dz.addEventListener('drop', e => { e.preventDefault(); dz.classList.remove('drag-over'); if (e.dataTransfer.files[0]) loadFile(e.dataTransfer.files[0]); });
 fi.addEventListener('change', e => { if (e.target.files[0]) loadFile(e.target.files[0]); });
 
@@ -506,179 +505,315 @@ function loadFile(f) {
   filePath = window.electronAPI?.getPath?.(f) || f.path || f.name;
   const el = document.getElementById('fileInfo');
   el.style.display = 'block';
-  el.innerHTML = `<span class="fname">📄 ${f.name}</span><br><span class="fpath">${filePath}</span><br><span style="color:var(--muted);font-size:.63rem">${(f.size / 1024 / 1024).toFixed(2)} MB</span>`;
-  CHANNELS.forEach(c => { const e2 = document.getElementById('ch-' + c); if (e2) e2.classList.add('active'); });
-  setStatus('File loaded — ready', '');
+  el.innerHTML = `<span class="fname">📄 ${f.name}</span><br><span class="fpath">${filePath}</span><br><span style="color:var(--muted);font-size:.63rem">${(f.size/1024/1024).toFixed(2)} MB</span>`;
+  setStatus('File loaded — ready to upmix', '');
 }
 
 function toggle(el) { el.classList.toggle('on'); }
 function isOn(id)   { return document.getElementById(id).classList.contains('on'); }
 function fv(id)     { return parseFloat(document.getElementById(id).value); }
 function coeff(id)  { return (fv(id) / 100).toFixed(4); }
+function getSR()    { return document.getElementById('sampleRate').value; }
 
 function setStatus(txt, cls) {
-  const dot = document.getElementById('sdot');
-  const sp  = document.getElementById('stxt');
-  sp.textContent = txt; sp.className = cls || '';
-  dot.className  = 'sdot ' + (cls || 'idle');
+  document.getElementById('stxt').textContent = txt;
+  document.getElementById('stxt').className   = cls || '';
+  document.getElementById('sdot').className   = 'sdot ' + (cls || 'idle');
 }
 
 // ── FILTER GRAPH ─────────────────────────────────────────────────────────────
 //
-// FULL PRESERVATION STRATEGY
-// ──────────────────────────
-// Problem with the old approach: Side channel (L−R)/2 causes CANCELLATION of
-// any instrument that has equal or similar energy in L and R (centre-panned
-// sources, mono layers, background pads, etc.). They simply vanish.
+// CORE PHILOSOPHY — ADDITIVE ONLY, ZERO CANCELLATION
+// ───────────────────────────────────────────────────
+// The root cause of the missing instruments in v2 was using (L−R)/2 as the
+// source for surround/rear. Centre-panned instruments have L≈R, so L−R≈0
+// and they vanish completely.
 //
-// New approach: ADDITIVE FOLD — never subtract, only add.
+// This version uses ONLY ADDITIVE operations:
 //
-// LAYER 1 — MAIN FOLD (equal-power coefficients, ITU-R BS.775)
-//   OUT_L = FL×1.0 + FC×0.707 + LFE×lfe + SL×0.707 + BL×0.65
-//   OUT_R = FR×1.0 + FC×0.707 + LFE×lfe + SR×0.707 + BR×0.65
-//   This preserves EVERY channel. Nothing is ever subtracted.
+// SOURCE for ALL spatial channels = Mid = (L+R)/2
+//   This is a full-content mono sum. Every instrument — panned anywhere —
+//   is present in the Mid signal. Nothing cancels.
 //
-// LAYER 2 — DETAIL RECOVERY PASS
-//   Extract the mid-panned "quiet" content that might get masked:
-//   Mid = (all channels summed at equal weight) → highpass 200Hz → soft blend
-//   This recovers background instruments, ambient layers, quiet pads.
+// CHANNEL DERIVATION:
+//   FL out  = L  (bit-perfect)
+//   FR out  = R  (bit-perfect)
 //
-// LAYER 3 — SURROUND WIDTH (Haas ITD)
-//   SL/SR get a 1.5ms inter-channel delay before folding → encodes spatial cue
-//   that survives in the stereo image (not side-channel, not destructive)
+//   FC  = Mid lowpassed at 8kHz (voice/dialogue range, no clash with FL/FR treble)
+//         highpassed at 80Hz (LFE handles sub)
 //
-// LAYER 4 — extrastereo to widen the front image without phase issues
+//   LFE = Mid lowpassed at 80Hz (double-pole), then boosted
+//         (all sub-bass is in Mid because bass is naturally mono/centre-weighted)
 //
-// LAYER 5 — Detail EQ (tuned for 7.1→stereo masking compensation)
+//   SL  = Mid → pan to stereo (L-weighted) → highpass 100Hz → reverb → EQ
+//   SR  = Mid → pan to stereo (R-weighted) → highpass 100Hz → reverb → EQ
+//         Plus optional Haas ITD delay on one channel for spatial width
+//         Plus optional detail recovery layer blended additively
 //
-// LAYER 6 — LUFS limiter (loudnorm two-pass: analysis + correction)
-//   This makes it louder without clipping or squashing transients.
-//   True Peak limiting prevents inter-sample overs.
+//   BL  = Mid → delay (rear depth) → darker EQ → diffuse reverb → L channel
+//   BR  = Mid → delay (rear depth) → darker EQ → diffuse reverb → R channel
+//         Rear delay is slightly asymmetric (delay_L vs delay_L+2ms) for naturalness
+//
+// DETAIL RECOVERY: An additional Mid pass at a separate split is taken,
+//   highpassed at 300Hz (to recover upper-mid background instruments/vocals),
+//   and blended into SL/SR and BL/BR additively at the user-set level.
+//
+// ALL channels assembled via pan= filter into 7.1 output.
+// loudnorm applied globally at the end.
+//
+// FILTER GRAPH STRUCTURE — every asplit output is used, no dangling connections
 //
 function buildFilter() {
-  const fc   = coeff('fcSlider');
-  const lfe  = coeff('lfeSlider');
-  const sl   = coeff('slSlider');
-  const bl   = coeff('blSlider');
-  const dr   = coeff('drSlider');
-  const xs   = fv('xsSlider').toFixed(3);
+  const fcBlend  = coeff('fcSlider');
+  const lfeBlend = (fv('lfeSlider') / 100).toFixed(4);
+  const slBlend  = coeff('slSlider');
+  const blBlend  = coeff('blSlider');
+  const drBlend  = coeff('drSlider');
+  const rearMs   = fv('rearSlider').toFixed(1);
+  const rearMsR  = rearMs; // symmetric — asymmetry caused phantom-centre shift in downmix
+  const revBlend = (fv('revSlider')  / 100).toFixed(4);
+  const rev2Bl   = (fv('rev2Slider') / 100).toFixed(4);
+  const xsMul    = fv('xsSlider').toFixed(3);
+  const haasMs   = fv('haasSlider').toFixed(1);
 
-  const eq1  = fv('eq1Slider').toFixed(1);
-  const eq2  = fv('eq2Slider').toFixed(1);
-  const eq3  = fv('eq3Slider').toFixed(1);
-  const eq4  = fv('eq4Slider').toFixed(1);
-  const eq5  = fv('eq5Slider').toFixed(1);
-  const eq6  = fv('eq6Slider').toFixed(1);
+  const leq1 = fv('leq1Slider').toFixed(1);
+  const seq1 = fv('seq1Slider').toFixed(1);
+  const seq2 = fv('seq2Slider').toFixed(1);
+  const beq1 = fv('beq1Slider').toFixed(1);
+  const beq2 = fv('beq2Slider').toFixed(1);
+  const beq3 = fv('beq3Slider').toFixed(1);
 
   const lufs = fv('lufsSlider').toFixed(1);
   const tp   = fv('tpSlider').toFixed(1);
   const lra  = fv('lraSlider').toFixed(0);
 
-  const useFold   = isOn('tog-fold');
+  const useFC     = isOn('tog-fc');
+  const useLFE    = isOn('tog-lfe');
+  const useSurr   = isOn('tog-surr');
+  const useRear   = isOn('tog-rear');
   const useDetail = isOn('tog-detail');
-  const useHaas   = isOn('tog-haas');
+  const useRev    = isOn('tog-rev');
   const useEQ     = isOn('tog-eq');
   const useLUFS   = isOn('tog-lufs');
   const useDC     = isOn('tog-dc');
 
-  let lines = [];
+  // Count exactly how many splits we need so every output is consumed
+  // Splits needed: 1 passthrough (always) + 1 per enabled spatial channel
+  // We avoid declaring unused outputs entirely.
+  const splits = [];
+  splits.push('pt_src');                              // always: FL/FR passthrough
+  if (useFC)                 splits.push('fc_src');
+  if (useLFE)                splits.push('lfe_src');
+  if (useSurr)               splits.push('sl_src');
+  if (useRear)               splits.push('bl_src');
+  if (useDetail && (useSurr || useRear)) splits.push('det_src');
 
-  // How many parallel copies we need
-  const splitN = (useFold ? 1 : 0) + (useDetail ? 1 : 0) + (useHaas ? 1 : 0);
-  const actualSplit = Math.max(1, splitN);
+  const lines = [];
 
-  lines.push(`[0:a]asplit=${actualSplit + (useDetail ? 0 : 0)}[main_a]${useDetail ? '[detail_a]' : ''}${useHaas ? '[haas_a]' : ''}`);
+  // ── SPLIT ──
+  lines.push(`[0:a]asplit=${splits.length}[${splits.join('][')}]`);
 
-  // ── LAYER 1: Main fold ──
-  // Every single channel gets folded in additively.
-  // SL/SR and BL/BR are included at equal-power levels.
-  // NO subtraction anywhere.
-  if (useFold) {
-    lines.push(
-      `[main_a]pan=stereo|` +
-      `FL=FL+${fc}*FC+${lfe}*LFE+${sl}*SL+${bl}*BL|` +
-      `FR=FR+${fc}*FC+${lfe}*LFE+${sl}*SR+${bl}*BR[fold_raw]`
-    );
-  } else {
-    lines.push(`[main_a]pan=stereo|FL=FL|FR=FR[fold_raw]`);
+  // ── FL / FR passthrough ──
+  lines.push(`[pt_src]pan=stereo|FL=FL|FR=FR[flr_pass]`);
+
+  // ── FC ──
+  if (useFC) {
+    lines.push(`[fc_src]pan=mono|c0=0.5*FL+0.5*FR[fc_mid]`);
+    lines.push(`[fc_mid]highpass=f=80[fc_hp]`);
+    lines.push(`[fc_hp]lowpass=f=8000[fc_lp]`);
+    if (useEQ) {
+      lines.push(`[fc_lp]equalizer=f=1000:width_type=o:width=2:g=1.5[fc_eq1]`);
+      lines.push(`[fc_eq1]equalizer=f=3000:width_type=o:width=1:g=-1.0[fc_eq]`);
+    } else {
+      lines.push(`[fc_lp]acopy[fc_eq]`);
+    }
+    lines.push(`[fc_eq]volume=${fcBlend}[fc_out]`);
   }
 
-  // ── LAYER 2: Background detail recovery ──
-  // Takes ALL channels summed equally → extracts mid-panned quiet content
-  // that the weighted fold might slightly suppress (very quiet backgrounds etc.)
-  // Re-blends at user-defined level. This is ADDITIVE — never cancels.
-  if (useDetail) {
-    lines.push(
-      `[detail_a]pan=stereo|` +
-      `FL=0.25*FL+0.25*FC+0.15*LFE+0.20*SL+0.15*BL|` +
-      `FR=0.25*FR+0.25*FC+0.15*LFE+0.20*SR+0.15*BR[detail_raw]`
-    );
-    lines.push(`[detail_raw]highpass=f=200[detail_hp]`);  // remove sub conflict with main fold sub
-    lines.push(`[detail_hp]volume=${dr}[detail_v]`);
-    lines.push(`[fold_raw][detail_v]amix=inputs=2:weights=1 1:normalize=0[with_detail]`);
-  } else {
-    lines.push(`[fold_raw]acopy[with_detail]`);
+  // ── LFE ──
+  // Source: Mid (L+R)/2 — sub-bass is naturally mono/centre, so Mid captures it all
+  if (useLFE) {
+    lines.push(`[lfe_src]pan=mono|c0=0.5*FL+0.5*FR[lfe_mid]`);
+    lines.push(`[lfe_mid]lowpass=f=80[lfe_lp1]`);
+    lines.push(`[lfe_lp1]lowpass=f=80[lfe_lp2]`);  // double-pole 80Hz rolloff
+    if (useEQ) {
+      lines.push(`[lfe_lp2]equalizer=f=45:width_type=o:width=1.0:g=${leq1}[lfe_eq1]`);
+      lines.push(`[lfe_eq1]equalizer=f=80:width_type=o:width=1.0:g=1.5[lfe_eq]`);
+    } else {
+      lines.push(`[lfe_lp2]acopy[lfe_eq]`);
+    }
+    lines.push(`[lfe_eq]volume=${lfeBlend}[lfe_out]`);
   }
 
-  // ── LAYER 3: Haas ITD surround width ──
-  // Apply a tiny delay to the whole mix (alternating L/R) to encode
-  // surround width cue into the stereo image without phase cancellation.
-  // This is different from the old approach — it widens the fold itself,
-  // not a separate side channel.
-  if (useHaas) {
-    // Split the detail mix, delay one copy by 0.8ms on R channel only,
-    // then blend at low level to add width to the stereo image
-    lines.push(`[haas_a]pan=stereo|FL=0.45*SL+0.45*BL|FR=0.45*SR+0.45*BR[haas_surr]`);
-    lines.push(`[haas_surr]adelay=delays=0|1.2[haas_delay]`);
-    lines.push(`[haas_delay]volume=0.28[haas_v]`);
-    lines.push(`[with_detail][haas_v]amix=inputs=2:weights=1 1:normalize=0[with_haas]`);
-  } else {
-    lines.push(`[with_detail]acopy[with_haas]`);
+  // ── SL / SR ──
+  // ADDITIVE: built from full Mid signal, widened and spaced with delays/reverb
+  // NO (L-R) used — every instrument survives
+  //
+  // PHANTOM-CENTRE FIX:
+  //   Old approach used pan=stereo|FL=c0|FR=c0 (mono→stereo dup) then extrastereo.
+  //   extrastereo computes Out_L = Mid + k*(L-R) and Out_R = Mid - k*(L-R).
+  //   On a perfectly duplicated mono signal L=R, so L-R=0 and extrastereo does nothing.
+  //   Then adelay=0|Xms only delayed R → L arrived earlier → phantom shifted LEFT.
+  //
+  //   Fix: derive true L and R from the original stereo input directly (not from
+  //   re-duplicated mono). L channel takes more from original L, R takes more from
+  //   original R. This is symmetric and centre-stable.
+  //   Haas ITD is now applied symmetrically (same delay both channels) so it
+  //   adds perceived spaciousness without pulling the image to one side.
+  if (useSurr) {
+    // Derive L/R surround from original stereo — symmetric pan, never mono-dup
+    // FL-weighted for L channel, FR-weighted for R channel keeps centre locked
+    lines.push(`[sl_src]pan=stereo|FL=0.6*FL+0.4*FR|FR=0.4*FL+0.6*FR[sl_stereo]`);
+    lines.push(`[sl_stereo]highpass=f=100[sl_hp]`);
+    lines.push(`[sl_hp]lowpass=f=16000[sl_lp]`);
+    // Width expansion: extrastereo is now fed a true stereo signal so L-R is real
+    // and the expansion is symmetric — no phantom shift
+    if (parseFloat(xsMul) > 1.0) {
+      lines.push(`[sl_lp]extrastereo=m=${xsMul}[sl_wide]`);
+    } else {
+      lines.push(`[sl_lp]acopy[sl_wide]`);
+    }
+    // Haas ITD: apply SAME delay to both channels — adds room feel without
+    // left/right timing asymmetry that Voicemeeter downmix would interpret as panning
+    if (parseFloat(haasMs) > 0) {
+      lines.push(`[sl_wide]adelay=delays=${haasMs}|${haasMs}[sl_haas]`);
+    } else {
+      lines.push(`[sl_wide]acopy[sl_haas]`);
+    }
+    // Reverb for room ambience — short tails for surrounds
+    if (useRev) {
+      const revG = (parseFloat(revBlend) * 0.8 + 0.2).toFixed(3);
+      lines.push(`[sl_haas]aecho=0.8:${revG}:20|40:0.30|0.18[sl_rev]`);
+    } else {
+      lines.push(`[sl_haas]acopy[sl_rev]`);
+    }
+    if (useEQ) {
+      lines.push(`[sl_rev]equalizer=f=200:width_type=o:width=1.5:g=-1.0[sl_eq1]`);
+      lines.push(`[sl_eq1]equalizer=f=3500:width_type=o:width=1.0:g=${seq1}[sl_eq2]`);
+      lines.push(`[sl_eq2]equalizer=f=10000:width_type=o:width=2.0:g=${seq2}[sl_eq]`);
+    } else {
+      lines.push(`[sl_rev]acopy[sl_eq]`);
+    }
+    lines.push(`[sl_eq]volume=${slBlend}[slsr_out]`);
   }
 
-  // ── DC offset removal ──
+  // ── BL / BR ──
+  // Same additive Mid source but delayed (rear depth) + darker EQ + more diffuse reverb
+  if (useRear) {
+    lines.push(`[bl_src]pan=mono|c0=0.5*FL+0.5*FR[bl_mid]`);
+    lines.push(`[bl_mid]highpass=f=80[bl_hp]`);
+    lines.push(`[bl_hp]lowpass=f=12000[bl_lp]`);   // rears are naturally darker
+    lines.push(`[bl_lp]pan=stereo|FL=c0|FR=c0[bl_stereo]`);
+    // Rear delay: creates the sense of depth vs surrounds
+    lines.push(`[bl_stereo]adelay=delays=${rearMs}|${rearMsR}[bl_dly]`);
+    // More diffuse reverb for rear envelopment
+    if (useRev) {
+      const rev2G = (parseFloat(rev2Bl) * 0.75 + 0.25).toFixed(3);
+      lines.push(`[bl_dly]aecho=0.75:${rev2G}:50|80|110:0.38|0.24|0.14[bl_rev]`);
+    } else {
+      lines.push(`[bl_dly]acopy[bl_rev]`);
+    }
+    if (useEQ) {
+      lines.push(`[bl_rev]equalizer=f=120:width_type=o:width=1.5:g=${beq1}[bl_eq1]`);
+      lines.push(`[bl_eq1]equalizer=f=300:width_type=o:width=1.5:g=${beq2}[bl_eq2]`);
+      lines.push(`[bl_eq2]equalizer=f=3000:width_type=o:width=1.5:g=-1.2[bl_eq3]`);
+      lines.push(`[bl_eq3]equalizer=f=8000:width_type=o:width=2.0:g=${beq3}[bl_eq]`);
+    } else {
+      lines.push(`[bl_rev]acopy[bl_eq]`);
+    }
+    lines.push(`[bl_eq]volume=${blBlend}[blbr_out]`);
+  }
+
+  // ── DETAIL RECOVERY ──
+  // Separate Mid extract, highpassed to recover upper-mid background content.
+  // Blended additively into surround/rear mix — never subtracts anything.
+  if (useDetail && (useSurr || useRear)) {
+    lines.push(`[det_src]pan=mono|c0=0.5*FL+0.5*FR[det_mid]`);
+    lines.push(`[det_mid]highpass=f=300[det_hp]`);
+    lines.push(`[det_hp]lowpass=f=12000[det_lp]`);
+    lines.push(`[det_lp]pan=stereo|FL=c0|FR=c0[det_stereo]`);
+    lines.push(`[det_stereo]volume=${drBlend}[det_out]`);
+  }
+
+  // ── DC OFFSET ──
   if (useDC) {
-    lines.push(`[with_haas]dcshift=shift=0[dc_clean]`);
+    lines.push(`[flr_pass]dcshift=shift=0[flr_dc]`);
   } else {
-    lines.push(`[with_haas]acopy[dc_clean]`);
+    lines.push(`[flr_pass]acopy[flr_dc]`);
   }
 
-  // ── Stereo widener ──
-  lines.push(`[dc_clean]extrastereo=m=${xs}[widened]`);
+  // ── ASSEMBLE 7.1 ──
+  // Merge all active streams, then route into 7.1 pan filter.
+  // FFmpeg 7.1 layout: FL FR FC LFE BL BR SL SR
+  //
+  // We carefully track channel indices in the merged stream.
 
-  // ── LAYER 5: Detail EQ ──
-  if (useEQ) {
-    lines.push(`[widened]equalizer=f=40:width_type=o:width=1.2:g=${eq1}[e1]`);
-    lines.push(`[e1]equalizer=f=250:width_type=o:width=1.5:g=${eq2}[e2]`);
-    lines.push(`[e2]equalizer=f=2200:width_type=o:width=0.5:g=${eq6}[e3]`);   // harsh notch first
-    lines.push(`[e3]equalizer=f=3500:width_type=o:width=1.0:g=${eq3}[e4]`);
-    lines.push(`[e4]equalizer=f=8000:width_type=o:width=2.0:g=${eq4}[e5]`);
-    lines.push(`[e5]equalizer=f=14000:width_type=o:width=2.0:g=${eq5}[eq_out]`);
-  } else {
-    lines.push(`[widened]acopy[eq_out]`);
+  const mergeInputs = ['flr_dc'];                              // c0=FL, c1=FR  (stereo)
+  if (useFC)   mergeInputs.push('fc_out');                     // c2 (mono)
+  if (useLFE)  mergeInputs.push('lfe_out');                    // c3 (mono)
+
+  // Build surround/rear with optional detail recovery merged in first
+  // SL/SR source
+  if (useSurr && useDetail && (useSurr || useRear)) {
+    lines.push(`[slsr_out][det_out]amix=inputs=2:weights=1 1:normalize=0[slsr_final]`);
+    mergeInputs.push('slsr_final');                            // c4=SL, c5=SR (stereo)
+  } else if (useSurr) {
+    mergeInputs.push('slsr_out');                              // c4=SL, c5=SR (stereo)
   }
 
-  // ── LAYER 6: LUFS Loudness Limiter ──
-  // loudnorm does a two-pass analysis internally when called with print_format=none.
-  // It raises quiet passages, limits peaks to true peak ceiling, and normalises to target LUFS.
-  // This is MUCH better than a simple compressor — it preserves dynamics within the LRA window.
+  // BL/BR source
+  if (useRear) {
+    mergeInputs.push('blbr_out');                              // c6=BL, c7=BR (stereo)
+  }
+
+  lines.push(`[${mergeInputs.join('][')}]amerge=inputs=${mergeInputs.length}[merged]`);
+
+  // Build pan routing based on which channels are present
+  let ch = 0;
+  const flC = `c${ch}`, frC = `c${ch+1}`; ch += 2;
+
+  let fcC  = '0';
+  let lfeC = '0';
+  let slC  = '0', srC = '0';
+  let blC  = '0', brC = '0';
+
+  if (useFC)   { fcC  = `c${ch}`;            ch += 1; }
+  if (useLFE)  { lfeC = `c${ch}`;            ch += 1; }
+  if (useSurr) { slC  = `c${ch}`; srC = `c${ch+1}`; ch += 2; }
+  if (useRear) { blC  = `c${ch}`; brC = `c${ch+1}`; ch += 2; }
+
+  // If FC not active, derive it from FL+FR mix at output stage
+  const fcExpr  = useFC  ? fcC  : `0.5*${flC}+0.5*${frC}`;
+  const lfeExpr = useLFE ? lfeC : '0';
+  const blExpr  = useRear ? blC : (useSurr ? slC  : '0');
+  const brExpr  = useRear ? brC : (useSurr ? srC  : '0');
+  const slExpr  = useSurr ? slC : '0';
+  const srExpr  = useSurr ? srC : '0';
+
+  lines.push(
+    `[merged]pan=7.1|` +
+    `FL=${flC}|FR=${frC}|FC=${fcExpr}|LFE=${lfeExpr}|` +
+    `BL=${blExpr}|BR=${brExpr}|SL=${slExpr}|SR=${srExpr}` +
+    `[pan71]`
+  );
+
+  // ── LUFS LIMITER ──
   if (useLUFS) {
-    lines.push(`[eq_out]loudnorm=I=${lufs}:TP=${tp}:LRA=${lra}:linear=true:print_format=none[out]`);
+    lines.push(`[pan71]loudnorm=I=${lufs}:TP=${tp}:LRA=${lra}:linear=true:print_format=none[out]`);
   } else {
-    lines.push(`[eq_out]acopy[out]`);
+    lines.push(`[pan71]acopy[out]`);
   }
 
   return lines.join(';');
 }
 
-function getSR()  { return document.getElementById('sampleRate').value; }
-
 function getCodecArgs(fmt) {
+  const sr = getSR();
   switch (fmt) {
-    case 'wav':     return ['-c:a', 'pcm_f32le',  '-ar', getSR()];
-    case 'aiff':    return ['-c:a', 'pcm_s24be',  '-ar', getSR()];
-    case 'flac_24': return ['-c:a', 'flac', '-sample_fmt', 's32', '-bits_per_raw_sample', '24', '-ar', getSR()];
-    default:        return ['-c:a', 'flac', '-sample_fmt', 's32', '-ar', getSR()];
+    case 'wav':     return ['-c:a', 'pcm_f32le',  '-ar', sr];
+    case 'aiff':    return ['-c:a', 'pcm_s24be',  '-ar', sr];
+    case 'flac_24': return ['-c:a', 'flac', '-sample_fmt', 's32', '-bits_per_raw_sample', '24', '-ar', sr];
+    default:        return ['-c:a', 'flac', '-sample_fmt', 's32', '-ar', sr];
   }
 }
 
@@ -686,10 +821,10 @@ function buildOutPath() {
   const fmt  = document.getElementById('outFormat').value;
   const ext  = fmt === 'flac_24' ? 'flac' : fmt;
   const dir  = document.getElementById('outDir').value.trim();
-  const base = filePath.replace(/\.[^.]+$/, '') + ' - Stereo-Full.' + ext;
+  const base = filePath.replace(/\.[^.]+$/, '') + ' - 7.1-Upmix.' + ext;
   if (!dir) return base;
   const sep   = filePath.includes('/') ? '/' : '\\';
-  const fname = filePath.split(sep).pop().replace(/\.[^.]+$/, '') + ' - Stereo-Full.' + ext;
+  const fname = filePath.split(sep).pop().replace(/\.[^.]+$/, '') + ' - 7.1-Upmix.' + ext;
   return dir.replace(/[/\\]$/, '') + sep + fname;
 }
 
@@ -698,17 +833,16 @@ async function run() {
   const ffmpeg = document.getElementById('ffmpegPath').value.trim();
   if (!ffmpeg)  { setStatus('⚠ FFmpeg path missing', 'error'); return; }
 
-  const outPath = buildOutPath();
-  const filter  = buildFilter();
-  const fmt     = document.getElementById('outFormat').value;
+  const outPath    = buildOutPath();
+  const filterStr  = buildFilter();
+  const fmt        = document.getElementById('outFormat').value;
 
   const args = [
     '-i', filePath,
-    '-filter_complex', filter,
+    '-filter_complex', filterStr,
     '-map', '[out]',
     '-map', '0:v?',
     '-map_metadata', '0',
-    '-map_metadata:s:a:0', '0:s:a:0',
     ...getCodecArgs(fmt),
     '-c:v', 'copy',
     outPath
@@ -716,9 +850,12 @@ async function run() {
 
   const log = document.getElementById('output');
   log.style.display = 'block';
-  log.textContent = '# FFmpeg command\n' + ffmpeg + ' ' + args.map(a => a.includes(' ') ? `"${a}"` : a).join(' ') + '\n\n# Processing…';
+  log.textContent =
+    '# FFmpeg command\n' + ffmpeg + ' ' +
+    args.map(a => a.includes(' ') ? `"${a}"` : a).join(' ') +
+    '\n\n# Processing…';
 
-  setStatus('Processing — please wait…', 'running');
+  setStatus('Upmixing — please wait…', 'running');
   document.getElementById('progWrap').style.display = 'block';
   document.getElementById('runBtn').disabled = true;
 
@@ -730,18 +867,21 @@ async function run() {
       setStatus('❌ Failed — check log', 'error');
       log.textContent += '\n\n# STDERR:\n' + res.stderr;
     } else {
-      setStatus('✅ Downmix complete', 'done');
+      setStatus('✅ 7.1 upmix complete', 'done');
       log.textContent += '\n\n# Output:\n' + outPath;
     }
   } else {
     document.getElementById('progWrap').style.display = 'none';
     document.getElementById('runBtn').disabled = false;
-    setStatus('ℹ Preview mode — copy command to terminal', '');
-    log.textContent += '\n\n# No Electron IPC detected. Run the command above manually.\n# Expected output: ' + outPath;
+    setStatus('ℹ Preview — copy command to terminal', '');
+    log.textContent +=
+      '\n\n# No Electron IPC detected. Run the command above manually.\n' +
+      '# Expected output: ' + outPath;
   }
 }
 
-document.getElementById('bstamp').textContent = 'BUILD ' + new Date().toISOString().slice(0,10).replace(/-/g, '');
+document.getElementById('bstamp').textContent =
+  'BUILD ' + new Date().toISOString().slice(0, 10).replace(/-/g, '');
 </script>
 </body>
 </html>
