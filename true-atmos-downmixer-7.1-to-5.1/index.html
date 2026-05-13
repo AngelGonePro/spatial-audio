@@ -1,0 +1,770 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>7.1 → 5.1 Downmixer</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:      #08060e;
+    --panel:   #100d1a;
+    --border:  #221a35;
+    --accent:  #c77dff;
+    --accent2: #ff6b35;
+    --blue:    #00d4ff;
+    --green:   #39ff85;
+    --yellow:  #ffcc00;
+    --red:     #ff4466;
+    --muted:   #4a3d60;
+    --text:    #ccc0e0;
+    --heading: #ede0ff;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{
+    background:var(--bg);color:var(--text);
+    font-family:'Share Tech Mono',monospace;
+    min-height:100vh;padding:28px 22px 60px;
+    position:relative;overflow-x:hidden;
+  }
+  body::before{
+    content:'';position:fixed;inset:0;
+    background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(199,125,255,.008) 2px,rgba(199,125,255,.008) 4px);
+    pointer-events:none;z-index:999;
+  }
+  body::after{
+    content:'';position:fixed;top:0;right:0;width:320px;height:320px;
+    background:radial-gradient(circle at 100% 0,rgba(199,125,255,.055) 0%,transparent 70%);
+    pointer-events:none;
+  }
+  .wrapper{max-width:820px;margin:0 auto;}
+
+  /* HEADER */
+  header{display:flex;align-items:center;gap:14px;border-bottom:1px solid var(--border);padding-bottom:18px;margin-bottom:26px;}
+  .logo{width:50px;height:50px;border:1.5px solid var(--accent);border-radius:9px;display:grid;place-items:center;font-size:22px;box-shadow:0 0 18px rgba(199,125,255,.3);animation:glow 3s ease-in-out infinite;}
+  @keyframes glow{0%,100%{box-shadow:0 0 12px rgba(199,125,255,.22);}50%{box-shadow:0 0 32px rgba(199,125,255,.6);}}
+  .htxt h1{font-family:'Orbitron',sans-serif;font-size:1.05rem;font-weight:900;color:var(--heading);letter-spacing:.13em;text-transform:uppercase;}
+  .htxt p{font-size:.67rem;color:var(--muted);margin-top:3px;letter-spacing:.05em;}
+  .badge{margin-left:auto;padding:4px 10px;background:rgba(199,125,255,.08);border:1px solid rgba(199,125,255,.3);border-radius:4px;font-size:.62rem;color:var(--accent);letter-spacing:.1em;}
+  .badge2{margin-left:6px;padding:4px 10px;background:rgba(57,255,133,.07);border:1px solid rgba(57,255,133,.25);border-radius:4px;font-size:.62rem;color:var(--green);letter-spacing:.1em;}
+
+  /* SECTION LABEL */
+  .slbl{font-size:.6rem;letter-spacing:.18em;color:var(--muted);text-transform:uppercase;margin-bottom:7px;margin-top:22px;display:flex;align-items:center;gap:8px;}
+  .slbl::before{content:'';display:inline-block;width:10px;height:1px;background:var(--accent);opacity:.5;}
+
+  /* DROPZONE */
+  #dropzone{border:1.5px dashed rgba(199,125,255,.28);border-radius:10px;padding:32px 22px;text-align:center;cursor:pointer;background:rgba(199,125,255,.014);transition:border-color .2s,background .2s;}
+  #dropzone:hover,#dropzone.drag-over{border-color:var(--accent);background:rgba(199,125,255,.038);}
+  .dz-icon{font-size:2.2rem;display:block;margin-bottom:8px;}
+  .dz-main{font-family:'Orbitron',sans-serif;font-size:.76rem;color:var(--accent);letter-spacing:.1em;}
+  .dz-sub{font-size:.65rem;color:var(--muted);margin-top:4px;}
+  #fileInfo{display:none;margin-top:9px;padding:9px 13px;background:var(--panel);border:1px solid var(--border);border-radius:6px;font-size:.7rem;color:var(--text);line-height:1.75;}
+  .fname{color:var(--accent);font-weight:bold;}
+  .fpath{color:var(--muted);word-break:break-all;}
+
+  /* CHANNEL MAP */
+  .flow{display:flex;align-items:center;gap:10px;margin-top:8px;flex-wrap:wrap;}
+  .flow-group{display:flex;flex-direction:column;gap:5px;}
+  .flow-label{font-size:.55rem;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;text-align:center;}
+  .flow-chs{display:flex;gap:5px;}
+  .ch-pill{
+    padding:5px 10px;border-radius:5px;font-family:'Orbitron',sans-serif;
+    font-size:.6rem;letter-spacing:.07em;border:1px solid;
+    text-align:center;min-width:44px;
+  }
+  .ch-pass {color:var(--blue);  border-color:rgba(0,212,255,.4); background:rgba(0,212,255,.06);}
+  .ch-fc   {color:var(--yellow);border-color:rgba(255,204,0,.4); background:rgba(255,204,0,.06);}
+  .ch-lfe  {color:var(--accent2);border-color:rgba(255,107,53,.4);background:rgba(255,107,53,.06);}
+  .ch-sl   {color:var(--accent);border-color:rgba(199,125,255,.4);background:rgba(199,125,255,.06);}
+  .ch-fold {color:var(--green); border-color:rgba(57,255,133,.35);background:rgba(57,255,133,.05);}
+  .ch-out  {color:var(--green); border-color:rgba(57,255,133,.5); background:rgba(57,255,133,.08);font-weight:bold;}
+  .arrow-right{color:var(--muted);font-size:1.2rem;align-self:center;}
+  .plus-sign{color:var(--muted);font-size:.7rem;align-self:center;padding:0 2px;}
+
+  /* formula box */
+  .formula{
+    background:var(--panel);border:1px solid var(--border);
+    border-radius:8px;padding:12px 15px;margin-top:8px;
+    font-size:.65rem;line-height:2.0;color:var(--muted);
+  }
+  .formula .row{display:flex;align-items:baseline;gap:5px;flex-wrap:wrap;margin-bottom:4px;}
+  .ft{color:var(--text);}
+  .fc{display:inline-block;padding:1px 7px;border-radius:3px;font-family:'Orbitron',sans-serif;font-size:.57rem;font-weight:600;}
+  .fc-fl {background:rgba(0,212,255,.1);  color:var(--blue);  border:1px solid rgba(0,212,255,.25);}
+  .fc-fc {background:rgba(255,204,0,.08); color:var(--yellow);border:1px solid rgba(255,204,0,.25);}
+  .fc-lfe{background:rgba(255,107,53,.1); color:var(--accent2);border:1px solid rgba(255,107,53,.25);}
+  .fc-sl {background:rgba(199,125,255,.1);color:var(--accent);border:1px solid rgba(199,125,255,.25);}
+  .fc-bl {background:rgba(57,255,133,.08);color:var(--green); border:1px solid rgba(57,255,133,.25);}
+
+  /* info box */
+  .info-box{margin-top:10px;background:rgba(199,125,255,.03);border:1px solid rgba(199,125,255,.14);border-radius:7px;padding:11px 14px;font-size:.66rem;color:#aa90cc;line-height:1.8;}
+  .info-box strong{color:var(--accent);}
+  .info-box code{color:var(--yellow);font-size:.63rem;}
+
+  /* OPTIONS */
+  .opts{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:6px;}
+  .opts3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-top:6px;}
+  .card{background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:11px 13px;}
+  .card label{font-size:.62rem;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;display:block;margin-bottom:6px;}
+  .card select,.card input[type=range]{width:100%;background:var(--bg);border:1px solid var(--border);color:var(--text);font-family:'Share Tech Mono',monospace;font-size:.74rem;padding:6px 8px;border-radius:5px;outline:none;appearance:none;cursor:pointer;}
+  .card select:focus{border-color:var(--accent);}
+  input[type=range]{-webkit-appearance:none;height:4px;background:var(--border);border:none!important;padding:0!important;cursor:pointer;margin-top:4px;}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:13px;height:13px;background:var(--accent);border-radius:50%;cursor:pointer;box-shadow:0 0 6px rgba(199,125,255,.5);}
+  .rrow{display:flex;justify-content:space-between;font-size:.58rem;color:var(--muted);margin-top:3px;}
+  .va{color:var(--accent);} .vb{color:var(--blue);} .vc{color:var(--green);}
+  .vd{color:var(--accent2);} .ve{color:var(--yellow);} .vr{color:var(--red);}
+
+  /* LUFS */
+  .lufs-card{background:var(--panel);border:1px solid rgba(255,68,102,.32);border-radius:8px;padding:13px 15px;margin-top:6px;}
+  .lufs-header{display:flex;align-items:center;gap:10px;margin-bottom:10px;}
+  .lufs-header .icon{font-size:1.1rem;}
+  .lufs-header .title{font-family:'Orbitron',sans-serif;font-size:.72rem;color:var(--red);letter-spacing:.1em;}
+  .lufs-header .sub{font-size:.62rem;color:var(--muted);margin-left:auto;}
+  .lufs-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;}
+  .lufs-field label{font-size:.6rem;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;display:block;margin-bottom:5px;}
+  .lufs-field input[type=range]{width:100%;}
+  .lufs-meter{margin-top:10px;height:5px;background:var(--border);border-radius:3px;overflow:hidden;}
+  .lufs-fill{height:100%;width:0%;border-radius:3px;transition:width .4s;background:linear-gradient(90deg,var(--green),var(--yellow),var(--red));}
+
+  /* TOGGLES */
+  .tgrid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:7px;margin-top:6px;}
+  .ti{display:flex;align-items:center;gap:9px;background:var(--panel);border:1px solid var(--border);border-radius:7px;padding:9px 11px;cursor:pointer;transition:border-color .2s;}
+  .ti:hover{border-color:var(--muted);}
+  .ti.on{border-color:rgba(199,125,255,.32);}
+  .ti-txt{font-size:.64rem;color:var(--muted);line-height:1.4;}
+  .ti.on .ti-txt{color:var(--text);}
+  .sw{width:28px;height:15px;border-radius:8px;background:var(--border);position:relative;flex-shrink:0;transition:background .22s;}
+  .sw::after{content:'';position:absolute;top:2px;left:2px;width:11px;height:11px;border-radius:50%;background:var(--muted);transition:left .22s,background .22s;}
+  .ti.on .sw{background:rgba(199,125,255,.22);}
+  .ti.on .sw::after{left:15px;background:var(--accent);}
+
+  /* PATHS */
+  .path-row{display:flex;gap:7px;}
+  .path-row input,.path-inp{flex:1;background:var(--panel);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:'Share Tech Mono',monospace;font-size:.72rem;padding:8px 11px;outline:none;transition:border-color .2s;width:100%;}
+  .path-row input:focus,.path-inp:focus{border-color:var(--accent);}
+  .path-hint{font-size:.61rem;color:var(--muted);margin-top:4px;}
+
+  /* RUN */
+  #runBtn{margin-top:20px;width:100%;padding:14px;background:transparent;border:1.5px solid var(--accent);border-radius:8px;color:var(--accent);font-family:'Orbitron',sans-serif;font-size:.8rem;letter-spacing:.2em;text-transform:uppercase;cursor:pointer;position:relative;overflow:hidden;transition:background .2s,box-shadow .2s;}
+  #runBtn:hover{background:rgba(199,125,255,.07);box-shadow:0 0 24px rgba(199,125,255,.3);}
+  #runBtn:active{transform:scale(.99);}
+  #runBtn:disabled{border-color:var(--muted);color:var(--muted);cursor:default;box-shadow:none;}
+  .scan{position:absolute;top:0;left:-100%;width:100%;height:100%;background:linear-gradient(90deg,transparent,rgba(199,125,255,.14),transparent);animation:sc 2s linear infinite;pointer-events:none;}
+  @keyframes sc{to{left:100%;}}
+
+  .status-bar{margin-top:12px;display:flex;align-items:center;gap:9px;font-size:.7rem;}
+  .sdot{width:8px;height:8px;border-radius:50%;background:var(--muted);flex-shrink:0;}
+  .sdot.running{background:var(--yellow);animation:blink .7s step-start infinite;}
+  .sdot.done{background:var(--green);box-shadow:0 0 8px var(--green);}
+  .sdot.error{background:#ff4444;}
+  @keyframes blink{50%{opacity:0;}}
+  #stxt{color:var(--yellow);}
+  #stxt.done{color:var(--green);}
+  #stxt.error{color:#ff4444;}
+  .prog-wrap{margin-top:7px;height:3px;background:var(--border);border-radius:2px;overflow:hidden;display:none;}
+  .prog-fill{height:100%;width:40%;background:linear-gradient(90deg,var(--accent),var(--green));border-radius:2px;animation:slide 1.2s linear infinite;}
+  @keyframes slide{0%{transform:translateX(-200%);}100%{transform:translateX(350%);}}
+
+  #output{margin-top:12px;background:#050308;border:1px solid var(--border);border-radius:8px;padding:13px 15px;font-size:.68rem;color:var(--accent);white-space:pre-wrap;word-break:break-all;max-height:240px;overflow-y:auto;display:none;line-height:1.65;}
+  #output::-webkit-scrollbar{width:4px;}
+  #output::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px;}
+
+  hr{border:none;border-top:1px solid var(--border);margin:20px 0 0;}
+  footer{margin-top:22px;display:flex;justify-content:space-between;font-size:.58rem;color:var(--muted);border-top:1px solid var(--border);padding-top:12px;}
+</style>
+</head>
+<body>
+<div class="wrapper">
+
+  <header>
+    <div class="logo">⬇</div>
+    <div class="htxt">
+      <h1>7.1 → 5.1 Downmixer</h1>
+      <p>Equal-Power BL/BR Fold · Zero Comb Filtering · Full Detail Preservation · LUFS</p>
+    </div>
+    <div class="badge">7.1→5.1</div>
+    <div class="badge2">LOSSLESS</div>
+  </header>
+
+  <!-- DROPZONE -->
+  <div class="slbl">Input File — 7.1 Audio</div>
+  <div id="dropzone">
+    <span class="dz-icon">📂</span>
+    <div class="dz-main">Drag & Drop 7.1 Audio File</div>
+    <div class="dz-sub">FLAC · WAV · MKV · TrueHD · DTS-MA · MP4</div>
+  </div>
+  <input type="file" id="fileInput" hidden accept="audio/*,video/*,.flac,.wav,.mkv,.mp4,.truehd,.dts">
+  <div id="fileInfo"></div>
+
+  <!-- SIGNAL FLOW -->
+  <div class="slbl">Channel Routing — Input → Output</div>
+  <div class="flow">
+    <div class="flow-group">
+      <div class="flow-label">7.1 Input</div>
+      <div class="flow-chs">
+        <div class="ch-pill ch-pass">FL</div>
+        <div class="ch-pill ch-fc">FC</div>
+        <div class="ch-pill ch-pass">FR</div>
+      </div>
+      <div class="flow-chs" style="margin-top:4px">
+        <div class="ch-pill ch-lfe">LFE</div>
+        <div class="ch-pill ch-sl">SL</div>
+        <div class="ch-pill ch-sl">SR</div>
+      </div>
+      <div class="flow-chs" style="margin-top:4px">
+        <div class="ch-pill ch-fold">BL</div>
+        <div class="ch-pill ch-fold">BR</div>
+      </div>
+    </div>
+    <div class="arrow-right">→</div>
+    <div class="flow-group">
+      <div class="flow-label">Operation</div>
+      <div class="flow-chs"><div class="ch-pill ch-pass" style="min-width:90px">Direct pass</div></div>
+      <div class="flow-chs" style="margin-top:4px"><div class="ch-pill ch-sl" style="min-width:90px">Direct pass</div></div>
+      <div class="flow-chs" style="margin-top:4px"><div class="ch-pill ch-fold" style="min-width:90px">Equal-power fold</div></div>
+    </div>
+    <div class="arrow-right">→</div>
+    <div class="flow-group">
+      <div class="flow-label">5.1 Output</div>
+      <div class="flow-chs">
+        <div class="ch-pill ch-out">FL</div>
+        <div class="ch-pill ch-out" style="color:var(--yellow);border-color:rgba(255,204,0,.5)">FC</div>
+        <div class="ch-pill ch-out">FR</div>
+      </div>
+      <div class="flow-chs" style="margin-top:4px">
+        <div class="ch-pill ch-out" style="color:var(--accent2);border-color:rgba(255,107,53,.5)">LFE</div>
+        <div class="ch-pill ch-out" style="color:var(--accent);border-color:rgba(199,125,255,.5)">SL</div>
+        <div class="ch-pill ch-out" style="color:var(--accent);border-color:rgba(199,125,255,.5)">SR</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FORMULA -->
+  <div class="slbl">Mix Formula</div>
+  <div class="formula">
+    <div class="row">
+      <span class="ft">SL out =</span>
+      <span class="fc fc-sl">SL × 1.0</span>
+      <span style="color:var(--muted)">+</span>
+      <span class="fc fc-bl">BL × fold_coeff</span>
+      <span style="color:var(--muted);font-size:.58rem;margin-left:6px">(equal-power, BL delayed 0.5ms to prevent comb)</span>
+    </div>
+    <div class="row">
+      <span class="ft">SR out =</span>
+      <span class="fc fc-sl">SR × 1.0</span>
+      <span style="color:var(--muted)">+</span>
+      <span class="fc fc-bl">BR × fold_coeff</span>
+      <span style="color:var(--muted);font-size:.58rem;margin-left:6px">(equal-power, BR delayed 0.5ms to prevent comb)</span>
+    </div>
+    <div class="row" style="margin-top:4px">
+      <span class="ft">FL / FR / FC / LFE =</span>
+      <span style="color:var(--blue);margin-left:4px">direct passthrough — zero processing</span>
+    </div>
+  </div>
+
+  <div class="info-box">
+    <strong>Equal-power fold — why it matters:</strong>
+    A naive <code>SL_out = SL + BL</code> at equal amplitude causes a +3dB level jump and
+    potential comb filtering when SL and BL have similar content.
+    This uses <strong>equal-power coefficients</strong> (×0.707 each) so the combined
+    energy stays at 0dB. A tiny <strong>0.5ms pre-delay</strong> on BL/BR before folding
+    decorrelates the two signals just enough to eliminate comb notches — too small
+    to hear as echo, large enough to break phase alignment. All small details in both
+    channels survive because nothing is ever subtracted.
+  </div>
+
+  <!-- FOLD OPTIONS -->
+  <div class="slbl">Fold Coefficients</div>
+  <div class="opts">
+    <div class="card">
+      <label>SL/SR Keep Level  <span class="va" id="slKeepVal">100%</span></label>
+      <input type="range" id="slKeepSlider" min="50" max="100" step="5" value="100">
+      <div class="rrow"><span>50%</span><span>100% (0 dB)</span></div>
+    </div>
+    <div class="card">
+      <label>BL/BR Fold Level  <span class="vc" id="blFoldVal">70.7% (−3dB)</span></label>
+      <input type="range" id="blFoldSlider" min="0" max="100" step="1" value="70.7">
+      <div class="rrow"><span>Off</span><span>Full (0dB)</span></div>
+    </div>
+    <div class="card">
+      <label>BL/BR Pre-Delay (ms)  <span class="vb" id="preDelayVal">0.5 ms</span></label>
+      <input type="range" id="preDelaySlider" min="0" max="3" step="0.5" value="0.5">
+      <div class="rrow"><span>Off</span><span>3 ms</span></div>
+    </div>
+    <div class="card">
+      <label>Detail Recovery Blend  <span class="va" id="drVal">20%</span></label>
+      <input type="range" id="drSlider" min="0" max="50" step="5" value="20">
+      <div class="rrow"><span>Off</span><span>Heavy</span></div>
+    </div>
+  </div>
+
+  <!-- EQ -->
+  <div class="slbl">Post-Fold EQ (SL/SR channels only)</div>
+  <div class="opts3">
+    <div class="card">
+      <label>Sub Body 80 Hz  <span class="va" id="eq1Val">+1.0 dB</span></label>
+      <input type="range" id="eq1Slider" min="-4" max="4" step="0.5" value="1.0">
+      <div class="rrow"><span>−4</span><span>+4 dB</span></div>
+    </div>
+    <div class="card">
+      <label>Mud Cut 250 Hz  <span class="va" id="eq2Val">−1.0 dB</span></label>
+      <input type="range" id="eq2Slider" min="-5" max="2" step="0.5" value="-1.0">
+      <div class="rrow"><span>−5</span><span>+2 dB</span></div>
+    </div>
+    <div class="card">
+      <label>Presence 3.5 kHz  <span class="va" id="eq3Val">+0.5 dB</span></label>
+      <input type="range" id="eq3Slider" min="-3" max="3" step="0.5" value="0.5">
+      <div class="rrow"><span>−3</span><span>+3 dB</span></div>
+    </div>
+    <div class="card">
+      <label>Air 10 kHz  <span class="va" id="eq4Val">+0.8 dB</span></label>
+      <input type="range" id="eq4Slider" min="-3" max="3" step="0.5" value="0.8">
+      <div class="rrow"><span>−3</span><span>+3 dB</span></div>
+    </div>
+    <div class="card">
+      <label>Harsh Notch 2.2 kHz  <span class="va" id="eq5Val">−1.0 dB</span></label>
+      <input type="range" id="eq5Slider" min="-4" max="0" step="0.5" value="-1.0">
+      <div class="rrow"><span>−4</span><span>0 dB</span></div>
+    </div>
+    <div class="card">
+      <label>Global Trim  <span class="va" id="trimVal">0.0 dB</span></label>
+      <input type="range" id="trimSlider" min="-6" max="3" step="0.5" value="0">
+      <div class="rrow"><span>−6</span><span>+3 dB</span></div>
+    </div>
+  </div>
+
+  <!-- LUFS -->
+  <div class="slbl">LUFS Limiter / Loudness</div>
+  <div class="lufs-card">
+    <div class="lufs-header">
+      <span class="icon">🔊</span>
+      <span class="title">Integrated Loudness Limiter</span>
+      <span class="sub">EBU R128 · True Peak · Per-Channel Safe</span>
+    </div>
+    <div class="lufs-grid">
+      <div class="lufs-field">
+        <label>Target LUFS  <span class="vr" id="lufsVal">−14 LUFS</span></label>
+        <input type="range" id="lufsSlider" min="-24" max="-6" step="1" value="-14">
+        <div class="rrow"><span>−24</span><span>−6</span></div>
+      </div>
+      <div class="lufs-field">
+        <label>True Peak  <span class="vr" id="tpVal">−1.0 dBTP</span></label>
+        <input type="range" id="tpSlider" min="-3" max="0" step="0.5" value="-1">
+        <div class="rrow"><span>−3</span><span>0</span></div>
+      </div>
+      <div class="lufs-field">
+        <label>LRA Range  <span class="va" id="lraVal">11 LU</span></label>
+        <input type="range" id="lraSlider" min="4" max="20" step="1" value="11">
+        <div class="rrow"><span>4</span><span>20</span></div>
+      </div>
+    </div>
+    <div class="lufs-meter"><div class="lufs-fill" id="lufsFill"></div></div>
+    <div style="font-size:.6rem;color:var(--muted);margin-top:6px;">
+      Presets:
+      <span onclick="setLufs(-14,-1,11)"  style="cursor:pointer;color:var(--blue);  margin:0 6px">Streaming</span>
+      <span onclick="setLufs(-9,-0.5,8)"  style="cursor:pointer;color:var(--yellow);margin:0 6px">Loud Master</span>
+      <span onclick="setLufs(-18,-1,13)"  style="cursor:pointer;color:var(--green); margin:0 6px">Film/TV</span>
+      <span onclick="setLufs(-23,-1,20)"  style="cursor:pointer;color:var(--accent);margin:0 6px">Broadcast</span>
+    </div>
+  </div>
+
+  <!-- MODULES -->
+  <div class="slbl">Processing Modules</div>
+  <div class="tgrid">
+    <div class="ti on" id="tog-fold"   onclick="toggle(this)"><div class="sw"></div><div class="ti-txt">Equal-Power<br>BL/BR Fold</div></div>
+    <div class="ti on" id="tog-delay"  onclick="toggle(this)"><div class="sw"></div><div class="ti-txt">Pre-Delay<br>Decorrelation</div></div>
+    <div class="ti on" id="tog-detail" onclick="toggle(this)"><div class="sw"></div><div class="ti-txt">Background<br>Detail Recovery</div></div>
+    <div class="ti on" id="tog-eq"     onclick="toggle(this)"><div class="sw"></div><div class="ti-txt">Post-Fold<br>EQ</div></div>
+    <div class="ti on" id="tog-lufs"   onclick="toggle(this)"><div class="sw"></div><div class="ti-txt">LUFS<br>Limiter</div></div>
+    <div class="ti on" id="tog-dc"     onclick="toggle(this)"><div class="sw"></div><div class="ti-txt">DC Offset<br>Remove</div></div>
+  </div>
+
+  <!-- OUTPUT -->
+  <div class="slbl">Output Settings</div>
+  <div class="opts">
+    <div class="card">
+      <label>Format</label>
+      <select id="outFormat">
+        <option value="flac">FLAC 32-bit (Lossless)</option>
+        <option value="wav">WAV 32-bit Float</option>
+        <option value="flac_24">FLAC 24-bit</option>
+        <option value="aiff">AIFF 24-bit</option>
+      </select>
+    </div>
+    <div class="card">
+      <label>Sample Rate</label>
+      <select id="sampleRate">
+        <option value="48000">48 kHz</option>
+        <option value="96000">96 kHz</option>
+        <option value="192000">192 kHz</option>
+        <option value="44100">44.1 kHz</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="slbl">FFmpeg Path</div>
+  <div class="path-row">
+    <input type="text" id="ffmpegPath" value="C:\Users\Angel\Documents\ffmpeg-8.0.1-full_build\bin\ffmpeg.exe">
+  </div>
+  <div class="slbl">Output Directory (optional)</div>
+  <input class="path-inp" type="text" id="outDir" placeholder="Leave blank — saves alongside source">
+  <div class="path-hint">Tagged: filename + " - 5.1-Down.flac"</div>
+
+  <button id="runBtn" onclick="run()">
+    <div class="scan"></div>
+    ▶&nbsp;&nbsp;Run 7.1 → 5.1 Downmix
+  </button>
+
+  <div class="status-bar">
+    <div class="sdot idle" id="sdot"></div>
+    <span id="stxt">Idle — load a 7.1 file to begin</span>
+  </div>
+  <div class="prog-wrap" id="progWrap"><div class="prog-fill"></div></div>
+  <pre id="output"></pre>
+
+  <hr>
+  <footer>
+    <span>7.1 → 5.1 DOWNMIXER · Electron / FFmpeg</span>
+    <span id="bstamp"></span>
+  </footer>
+</div>
+<script>
+'use strict';
+let filePath = '';
+
+// ── Sliders ──────────────────────────────────────────────────────────────────
+const SLIDERS = [
+  ['slKeepSlider', 'slKeepVal', v => Math.round(v) + '%'],
+  ['blFoldSlider', 'blFoldVal', v => parseFloat(v).toFixed(1) + '% (' + (20*Math.log10(parseFloat(v)/100)).toFixed(1) + 'dB)'],
+  ['preDelaySlider','preDelayVal',v => parseFloat(v).toFixed(1) + ' ms'],
+  ['drSlider',     'drVal',    v => Math.round(v) + '%'],
+  ['eq1Slider','eq1Val', v=>(parseFloat(v)>=0?'+':'')+parseFloat(v).toFixed(1)+' dB'],
+  ['eq2Slider','eq2Val', v=>(parseFloat(v)>=0?'+':'')+parseFloat(v).toFixed(1)+' dB'],
+  ['eq3Slider','eq3Val', v=>(parseFloat(v)>=0?'+':'')+parseFloat(v).toFixed(1)+' dB'],
+  ['eq4Slider','eq4Val', v=>(parseFloat(v)>=0?'+':'')+parseFloat(v).toFixed(1)+' dB'],
+  ['eq5Slider','eq5Val', v=>(parseFloat(v)>=0?'+':'')+parseFloat(v).toFixed(1)+' dB'],
+  ['trimSlider','trimVal',v=>(parseFloat(v)>=0?'+':'')+parseFloat(v).toFixed(1)+' dB'],
+  ['lufsSlider','lufsVal',v=>v+' LUFS'],
+  ['tpSlider',  'tpVal',  v=>parseFloat(v).toFixed(1)+' dBTP'],
+  ['lraSlider', 'lraVal', v=>v+' LU'],
+];
+SLIDERS.forEach(([id,vid,fmt])=>{
+  document.getElementById(id).addEventListener('input',function(){
+    document.getElementById(vid).textContent=fmt(this.value);
+    if(id==='lufsSlider') updateLufsMeter();
+  });
+});
+
+function updateLufsMeter(){
+  const v=parseFloat(document.getElementById('lufsSlider').value);
+  document.getElementById('lufsFill').style.width=((v-(-24))/((-6)-(-24))*100)+'%';
+}
+updateLufsMeter();
+
+function setLufs(l,t,r){
+  document.getElementById('lufsSlider').value=l;
+  document.getElementById('tpSlider').value=t;
+  document.getElementById('lraSlider').value=r;
+  document.getElementById('lufsVal').textContent=l+' LUFS';
+  document.getElementById('tpVal').textContent=parseFloat(t).toFixed(1)+' dBTP';
+  document.getElementById('lraVal').textContent=r+' LU';
+  updateLufsMeter();
+}
+
+// ── Dropzone ─────────────────────────────────────────────────────────────────
+const dz=document.getElementById('dropzone'), fi=document.getElementById('fileInput');
+dz.onclick=()=>fi.click();
+dz.addEventListener('dragover',e=>{e.preventDefault();dz.classList.add('drag-over');});
+dz.addEventListener('dragleave',()=>dz.classList.remove('drag-over'));
+dz.addEventListener('drop',e=>{e.preventDefault();dz.classList.remove('drag-over');if(e.dataTransfer.files[0])loadFile(e.dataTransfer.files[0]);});
+fi.addEventListener('change',e=>{if(e.target.files[0])loadFile(e.target.files[0]);});
+
+function loadFile(f){
+  filePath=window.electronAPI?.getPath?.(f)||f.path||f.name;
+  const el=document.getElementById('fileInfo');
+  el.style.display='block';
+  el.innerHTML=`<span class="fname">📄 ${f.name}</span><br><span class="fpath">${filePath}</span><br><span style="color:var(--muted);font-size:.63rem">${(f.size/1024/1024).toFixed(2)} MB</span>`;
+  setStatus('File loaded — ready','');
+}
+
+function toggle(el){el.classList.toggle('on');}
+function isOn(id){return document.getElementById(id).classList.contains('on');}
+function fv(id){return parseFloat(document.getElementById(id).value);}
+function coeff(id){return(fv(id)/100).toFixed(4);}
+function getSR(){return document.getElementById('sampleRate').value;}
+function setStatus(txt,cls){
+  document.getElementById('stxt').textContent=txt;
+  document.getElementById('stxt').className=cls||'';
+  document.getElementById('sdot').className='sdot '+(cls||'idle');
+}
+
+// ── FILTER GRAPH ─────────────────────────────────────────────────────────────
+//
+// 7.1 → 5.1 DOWNMIX STRATEGY
+// ────────────────────────────
+// INPUT channels (FFmpeg 7.1 layout): FL FR FC LFE BL BR SL SR
+//   Note: FFmpeg 7.1 order is  FL FR FC LFE BL BR SL SR
+//   i.e. BL/BR come BEFORE SL/SR in the channel index order.
+//
+// TARGET: 5.1 (FL FR FC LFE SL SR)
+//
+// PASSTHROUGH (zero-touch): FL, FR, FC, LFE
+//
+// FOLD (the only operation):
+//   SL_out = SL_in×sl_keep  +  BL_in×bl_fold  (after BL pre-delay)
+//   SR_out = SR_in×sl_keep  +  BR_in×bl_fold  (after BR pre-delay)
+//
+// WHY EQUAL-POWER NOT EQUAL-AMPLITUDE:
+//   If SL and BL carry similar content and you sum at full amplitude,
+//   the output is +3dB (energy doubles). Equal-power means each input
+//   gets ×0.707 (−3dB) so combined energy = 0.707²+0.707² = 1.0 = 0dB.
+//   You can adjust this with the sliders — default is SL×1.0, BL×0.707
+//   which keeps surround dominant and folds rear at −3dB.
+//
+// PRE-DELAY DECORRELATION:
+//   0.5ms delay on BL/BR before the fold. This is below the threshold
+//   of audible echo (~10ms) but breaks exact phase alignment between
+//   SL/BL, eliminating comb filter notches in the frequency response.
+//   If SL and BL were in perfect phase, certain frequencies would cancel.
+//
+// DETAIL RECOVERY:
+//   A second pass sums BL+BR at low level and blends into the SL/SR output.
+//   This additively recovers any detail that might be slightly masked
+//   by the fold weighting.
+//
+// FILTER GRAPH — carefully split to avoid dangling connections:
+//   Split 1: BL/BR channel extraction for main fold
+//   Split 2 (if detail enabled): second BL/BR copy for detail recovery
+//   Split 3: passthrough of all 6 passthrough channels
+//   All named outputs are consumed before pan filter.
+//
+function buildFilter(){
+  const slKeep = coeff('slKeepSlider');
+  const blFold = coeff('blFoldSlider');
+  const preMs  = fv('preDelaySlider').toFixed(1);
+  const dr     = coeff('drSlider');
+
+  const eq1 = fv('eq1Slider').toFixed(1);
+  const eq2 = fv('eq2Slider').toFixed(1);
+  const eq3 = fv('eq3Slider').toFixed(1);
+  const eq4 = fv('eq4Slider').toFixed(1);
+  const eq5 = fv('eq5Slider').toFixed(1);
+  const trim = fv('trimSlider').toFixed(1);
+
+  const lufs = fv('lufsSlider').toFixed(1);
+  const tp   = fv('tpSlider').toFixed(1);
+  const lra  = fv('lraSlider').toFixed(0);
+
+  const useFold   = isOn('tog-fold');
+  const useDelay  = isOn('tog-delay');
+  const useDetail = isOn('tog-detail');
+  const useEQ     = isOn('tog-eq');
+  const useLUFS   = isOn('tog-lufs');
+  const useDC     = isOn('tog-dc');
+
+  const lines = [];
+
+  // FFmpeg 7.1 channel indices in a stereo pan filter from a 7.1 source:
+  // When reading a 7.1 file, pan filter channel names are:
+  //   FL FR FC LFE BL BR SL SR  (in that named order)
+  // We use named channel references, not c0..c7, for clarity and correctness.
+
+  // How many splits do we need?
+  // Always need: 1 for passthrough+fold, 1 for detail if enabled
+  const splitN = useDetail ? 2 : 1;
+
+  if (splitN > 1) {
+    lines.push(`[0:a]asplit=${splitN}[main_src][det_src]`);
+  } else {
+    lines.push(`[0:a]acopy[main_src]`);
+  }
+
+  // ── PASSTHROUGH: FL FR FC LFE (extracted as 4-ch, unchanged) ──
+  // We pass FL/FR/FC/LFE directly. SL/SR get the fold treatment.
+
+  if (useFold) {
+    // BL/BR pre-delay then fold into SL/SR
+    if (useDelay && parseFloat(preMs) > 0) {
+      // Extract BL/BR, delay them, then fold
+      lines.push(
+        `[main_src]pan=5.1(side)|` +
+        `FL=FL|FR=FR|FC=FC|LFE=LFE|` +
+        // SL = SL_orig scaled + BL delayed and scaled
+        // We can't do the delay inline in pan, so we need to split:
+        // Extract (1) passthrough FL/FR/FC/LFE+SL/SR and (2) BL/BR for delay
+        `SL=SL|SR=SR[pass_slsr]`
+      );
+      // Separate BL/BR for delay
+      lines.push(
+        `[main_src]pan=stereo|FL=BL|FR=BR[bl_br_raw]`
+      );
+      lines.push(`[bl_br_raw]adelay=delays=${preMs}|${preMs}[bl_br_delayed]`);
+
+      // Scale and mix
+      lines.push(
+        `[pass_slsr]pan=5.1(side)|` +
+        `FL=FL|FR=FR|FC=FC|LFE=LFE|` +
+        `SL=${slKeep}*SL|SR=${slKeep}*SR[pass_scaled]`
+      );
+      lines.push(
+        `[bl_br_delayed]pan=stereo|FL=${blFold}*FL|FR=${blFold}*FR[bl_br_scaled]`
+      );
+      // Merge: we need to add BL/BR (now stereo) into SL/SR of the 5.1
+      lines.push(
+        `[pass_scaled][bl_br_scaled]amerge=inputs=2[merged_raw]`
+      );
+      // Remap: merged_raw has 7 channels (FL FR FC LFE SL SR BL_d BR_d as c0..c6)
+      // Add c6 into SL (c4) and c7 into SR (c5)... wait, amerge from 5.1+stereo = 8ch
+      // c0=FL c1=FR c2=FC c3=LFE c4=SL c5=SR c6=BL_delayed c7=BR_delayed
+      lines.push(
+        `[merged_raw]pan=5.1(side)|` +
+        `FL=c0|FR=c1|FC=c2|LFE=c3|` +
+        `SL=c4+c6|SR=c5+c7[folded_51]`
+      );
+    } else {
+      // No pre-delay — direct pan fold
+      lines.push(
+        `[main_src]pan=5.1(side)|` +
+        `FL=FL|FR=FR|FC=FC|LFE=LFE|` +
+        `SL=${slKeep}*SL+${blFold}*BL|` +
+        `SR=${slKeep}*SR+${blFold}*BR[folded_51]`
+      );
+    }
+  } else {
+    // No fold — just drop BL/BR
+    lines.push(
+      `[main_src]pan=5.1(side)|` +
+      `FL=FL|FR=FR|FC=FC|LFE=LFE|SL=SL|SR=SR[folded_51]`
+    );
+  }
+
+  // ── DC OFFSET ──
+  if (useDC) {
+    lines.push(`[folded_51]dcshift=shift=0[dc_out]`);
+  } else {
+    lines.push(`[folded_51]acopy[dc_out]`);
+  }
+
+  // ── DETAIL RECOVERY ──
+  // Extract BL+BR at low level and blend back into SL/SR additively
+  if (useDetail) {
+    lines.push(
+      `[det_src]pan=stereo|FL=${dr}*BL|FR=${dr}*BR[det_blbr]`
+    );
+    lines.push(
+      `[det_blbr]highpass=f=200[det_hp]`
+    );
+    // Merge detail stereo into the 5.1 SL/SR channels
+    lines.push(`[dc_out][det_hp]amerge=inputs=2[det_merged]`);
+    // dc_out was 5.1 (c0-c5), det_hp is stereo (c6=BL_det, c7=BR_det)
+    lines.push(
+      `[det_merged]pan=5.1(side)|` +
+      `FL=c0|FR=c1|FC=c2|LFE=c3|` +
+      `SL=c4+c6|SR=c5+c7[detail_out]`
+    );
+  } else {
+    lines.push(`[dc_out]acopy[detail_out]`);
+  }
+
+  // ── EQ on full 5.1 (applied to all channels, detail preserving) ──
+  if (useEQ) {
+    lines.push(`[detail_out]equalizer=f=80:width_type=o:width=1.2:g=${eq1}[e1]`);
+    lines.push(`[e1]equalizer=f=250:width_type=o:width=1.5:g=${eq2}[e2]`);
+    lines.push(`[e2]equalizer=f=2200:width_type=o:width=0.5:g=${eq5}[e3]`);
+    lines.push(`[e3]equalizer=f=3500:width_type=o:width=1.0:g=${eq3}[e4]`);
+    lines.push(`[e4]equalizer=f=10000:width_type=o:width=2.0:g=${eq4}[e5]`);
+    if (parseFloat(trim) !== 0) {
+      lines.push(`[e5]volume=${Math.pow(10, parseFloat(trim)/20).toFixed(4)}[eq_out]`);
+    } else {
+      lines.push(`[e5]acopy[eq_out]`);
+    }
+  } else {
+    if (parseFloat(trim) !== 0) {
+      lines.push(`[detail_out]volume=${Math.pow(10, parseFloat(trim)/20).toFixed(4)}[eq_out]`);
+    } else {
+      lines.push(`[detail_out]acopy[eq_out]`);
+    }
+  }
+
+  // ── LUFS ──
+  if (useLUFS) {
+    lines.push(`[eq_out]loudnorm=I=${lufs}:TP=${tp}:LRA=${lra}:linear=true:print_format=none[out]`);
+  } else {
+    lines.push(`[eq_out]acopy[out]`);
+  }
+
+  return lines.join(';');
+}
+
+function getCodecArgs(fmt){
+  const sr=getSR();
+  switch(fmt){
+    case 'wav':     return['-c:a','pcm_f32le','-ar',sr];
+    case 'aiff':    return['-c:a','pcm_s24be','-ar',sr];
+    case 'flac_24': return['-c:a','flac','-sample_fmt','s32','-bits_per_raw_sample','24','-ar',sr];
+    default:        return['-c:a','flac','-sample_fmt','s32','-ar',sr];
+  }
+}
+
+function buildOutPath(){
+  const fmt=document.getElementById('outFormat').value;
+  const ext=fmt==='flac_24'?'flac':fmt;
+  const dir=document.getElementById('outDir').value.trim();
+  const base=filePath.replace(/\.[^.]+$/,'')+' - 5.1-Down.'+ext;
+  if(!dir)return base;
+  const sep=filePath.includes('/')?'/':'\\';
+  const fname=filePath.split(sep).pop().replace(/\.[^.]+$/,'')+' - 5.1-Down.'+ext;
+  return dir.replace(/[/\\]$/,'')+sep+fname;
+}
+
+async function run(){
+  if(!filePath){setStatus('⚠ No file loaded','error');return;}
+  const ffmpeg=document.getElementById('ffmpegPath').value.trim();
+  if(!ffmpeg){setStatus('⚠ FFmpeg path missing','error');return;}
+
+  const outPath=buildOutPath();
+  const filterStr=buildFilter();
+  const fmt=document.getElementById('outFormat').value;
+
+  const args=[
+    '-i',filePath,
+    '-filter_complex',filterStr,
+    '-map','[out]',
+    '-map','0:v?',
+    '-map_metadata','0',
+    '-map_metadata:s:a:0','0:s:a:0',
+    ...getCodecArgs(fmt),
+    '-c:v','copy',
+    outPath
+  ];
+
+  const log=document.getElementById('output');
+  log.style.display='block';
+  log.textContent='# FFmpeg command\n'+ffmpeg+' '+args.map(a=>a.includes(' ')?`"${a}"`:a).join(' ')+'\n\n# Processing…';
+
+  setStatus('Processing — please wait…','running');
+  document.getElementById('progWrap').style.display='block';
+  document.getElementById('runBtn').disabled=true;
+
+  if(window.electronAPI?.runFFmpeg){
+    const res=await window.electronAPI.runFFmpeg({ffmpeg,args});
+    document.getElementById('progWrap').style.display='none';
+    document.getElementById('runBtn').disabled=false;
+    if(res.code!==0){
+      setStatus('❌ Failed — check log','error');
+      log.textContent+='\n\n# STDERR:\n'+res.stderr;
+    }else{
+      setStatus('✅ 5.1 downmix complete','done');
+      log.textContent+='\n\n# Output:\n'+outPath;
+    }
+  }else{
+    document.getElementById('progWrap').style.display='none';
+    document.getElementById('runBtn').disabled=false;
+    setStatus('ℹ Preview — copy command to terminal','');
+    log.textContent+='\n\n# No Electron IPC. Run command above manually.\n# Output: '+outPath;
+  }
+}
+
+document.getElementById('bstamp').textContent='BUILD '+new Date().toISOString().slice(0,10).replace(/-/g,'');
+</script>
+</body>
+</html>
