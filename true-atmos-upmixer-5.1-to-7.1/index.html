@@ -271,8 +271,8 @@
       <div class="rrow"><span>6 ms</span><span>28 ms</span></div>
     </div>
     <div class="card">
-      <label>L/R Asymmetry (ms)  <span class="vb" id="asymVal">+2.0 ms</span></label>
-      <input type="range" id="asymSlider" min="0" max="5" step="0.5" value="2.0">
+      <label>L/R Asymmetry (ms)  <span class="vb" id="asymVal">+0.0 ms</span></label>
+      <input type="range" id="asymSlider" min="0" max="5" step="0.5" value="0">
       <div class="rrow"><span>0 (symmetric)</span><span>5 ms</span></div>
     </div>
     <div class="card">
@@ -528,6 +528,9 @@ function setStatus(txt,cls){
 function buildFilter(){
   const blLvl  = coeff('blLvlSlider');
   const rearL  = fv('rearLSlider').toFixed(1);
+  // Symmetric: both channels delayed equally — asymmetry caused phantom-centre left-shift
+  // when Voicemeeter or any downmixer summed all channels. Asym slider kept for user control
+  // but defaults to 0 in the UI.
   const rearR  = (fv('rearLSlider') + fv('asymSlider')).toFixed(1);
   const hfFreq = Math.round(fv('hfSlider'));
   const revPct = (fv('revSlider')/100).toFixed(4);
