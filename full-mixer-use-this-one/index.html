@@ -1,0 +1,1665 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Surround Matrix — Universal Up/Downmixer</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:       #06080e;
+    --panel:    #0b0e17;
+    --border:   #182030;
+    --accent:   #00d4ff;
+    --accent2:  #ff6b35;
+    --green:    #39ff85;
+    --yellow:   #ffcc00;
+    --purple:   #b06cff;
+    --red:      #ff4466;
+    --muted:    #3a4d60;
+    --text:     #c0d4e4;
+    --heading:  #e4f0ff;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{
+    background:var(--bg);color:var(--text);
+    font-family:'Share Tech Mono',monospace;
+    min-height:100vh;padding:28px 22px 60px;
+    position:relative;overflow-x:hidden;
+  }
+  body::before{
+    content:'';position:fixed;inset:0;
+    background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,212,255,.010) 2px,rgba(0,212,255,.010) 4px);
+    pointer-events:none;z-index:999;
+  }
+  body::after{
+    content:'';position:fixed;top:0;left:0;width:280px;height:280px;
+    background:radial-gradient(circle at 0 0,rgba(0,212,255,.045) 0%,transparent 70%);
+    pointer-events:none;
+  }
+  .wrapper{max-width:820px;margin:0 auto;}
+
+  header{display:flex;align-items:center;gap:14px;border-bottom:1px solid var(--border);padding-bottom:18px;margin-bottom:26px;}
+  .logo{width:50px;height:50px;border:1.5px solid var(--accent);border-radius:9px;display:grid;place-items:center;font-size:22px;box-shadow:0 0 18px rgba(0,212,255,.28);animation:glow 3s ease-in-out infinite;}
+  @keyframes glow{0%,100%{box-shadow:0 0 12px rgba(0,212,255,.22);}50%{box-shadow:0 0 30px rgba(0,212,255,.55);}}
+  .htxt h1{font-family:'Orbitron',sans-serif;font-size:1.05rem;font-weight:900;color:var(--heading);letter-spacing:.13em;text-transform:uppercase;}
+  .htxt p{font-size:.67rem;color:var(--muted);margin-top:3px;letter-spacing:.05em;}
+  .badge{margin-left:auto;padding:4px 10px;background:rgba(0,212,255,.07);border:1px solid rgba(0,212,255,.28);border-radius:4px;font-size:.62rem;color:var(--accent);letter-spacing:.1em;}
+  .badge2{margin-left:6px;padding:4px 10px;background:rgba(57,255,133,.07);border:1px solid rgba(57,255,133,.28);border-radius:4px;font-size:.62rem;color:var(--green);letter-spacing:.1em;}
+
+  .dir-row{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-top:6px;}
+  .dir-select{flex:1;min-width:180px;}
+  .dir-select label{font-size:.6rem;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;display:block;margin-bottom:6px;}
+  .dir-select select{width:100%;background:var(--panel);border:1px solid var(--border);color:var(--text);font-family:'Share Tech Mono',monospace;font-size:.8rem;padding:9px 11px;border-radius:6px;outline:none;cursor:pointer;}
+  .dir-select select:focus{border-color:var(--accent);}
+  .dir-arrow{font-size:1.3rem;color:var(--accent);padding-top:16px;}
+  .dir-summary{margin-top:12px;padding:10px 13px;background:var(--panel);border:1px solid var(--border);border-radius:7px;font-size:.66rem;color:var(--muted);line-height:1.7;}
+  .dir-summary strong{color:var(--accent);}
+
+  .fmt-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:9px;margin-top:6px;}
+  .fmt-btn{background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:12px 8px;text-align:center;cursor:pointer;font-size:.72rem;font-weight:600;color:var(--text);transition:border-color .2s;}
+  .fmt-btn:hover{border-color:var(--muted);}
+  .fmt-btn .sub{display:block;font-size:.56rem;color:var(--muted);font-weight:400;margin-top:3px;}
+  .fmt-btn.sel{border-color:var(--accent);background:rgba(0,212,255,.05);}
+
+  .slbl{font-size:.6rem;letter-spacing:.18em;color:var(--muted);text-transform:uppercase;margin-bottom:7px;margin-top:22px;display:flex;align-items:center;gap:8px;}
+  .slbl::before{content:'';display:inline-block;width:10px;height:1px;background:var(--accent);opacity:.55;}
+
+  #dropzone{border:1.5px dashed rgba(0,212,255,.3);border-radius:10px;padding:32px 22px;text-align:center;cursor:pointer;background:rgba(0,212,255,.016);transition:border-color .2s,background .2s;}
+  #dropzone:hover,#dropzone.drag-over{border-color:var(--accent);background:rgba(0,212,255,.04);}
+  .dz-icon{font-size:2.2rem;display:block;margin-bottom:8px;}
+  .dz-main{font-family:'Orbitron',sans-serif;font-size:.76rem;color:var(--accent);letter-spacing:.1em;}
+  .dz-sub{font-size:.65rem;color:var(--muted);margin-top:4px;}
+
+  #fileInfo{display:none;margin-top:9px;padding:9px 13px;background:var(--panel);border:1px solid var(--border);border-radius:6px;font-size:.7rem;color:var(--text);line-height:1.75;}
+  .fname{color:var(--accent);font-weight:bold;}
+  .fpath{color:var(--muted);word-break:break-all;}
+
+  /* channel grid */
+  .ch-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-top:6px;}
+  .ch{border:1px solid var(--border);border-radius:7px;padding:8px 5px 6px;text-align:center;background:var(--panel);transition:border-color .3s,background .3s;}
+  .ch.active{border-color:var(--accent);background:rgba(0,212,255,.05);}
+  .ch.out{border-color:rgba(57,255,133,.35);background:rgba(57,255,133,.025);}
+  .ch .lbl{font-family:'Orbitron',sans-serif;font-size:.58rem;letter-spacing:.07em;color:var(--muted);}
+  .ch.active .lbl{color:var(--accent);}
+  .ch.out .lbl{color:var(--green);}
+  .ch .dot{margin:5px auto 0;width:26px;height:26px;border-radius:50%;background:var(--border);display:grid;place-items:center;font-size:.58rem;color:var(--muted);}
+  .ch.active .dot{background:rgba(0,212,255,.18);color:var(--accent);}
+  .ch.out .dot{background:rgba(57,255,133,.14);color:var(--green);}
+  .ch .role{font-size:.5rem;color:var(--muted);margin-top:3px;}
+  .ch.active .role{color:rgba(0,212,255,.6);}
+
+  /* mix path diagram */
+  .mix-diagram{
+    margin-top:10px;background:var(--panel);border:1px solid var(--border);
+    border-radius:8px;padding:13px 16px;font-size:.65rem;line-height:2.0;
+    color:var(--muted);
+  }
+  .mix-diagram .row{display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;}
+  .mix-diagram .ch-tag{
+    display:inline-block;padding:1px 7px;border-radius:3px;
+    font-family:'Orbitron',sans-serif;font-size:.58rem;font-weight:600;
+  }
+  .ct-fl{background:rgba(0,212,255,.12);color:var(--accent);border:1px solid rgba(0,212,255,.3);}
+  .ct-fc{background:rgba(255,204,0,.10);color:var(--yellow);border:1px solid rgba(255,204,0,.3);}
+  .ct-lfe{background:rgba(255,107,53,.10);color:var(--accent2);border:1px solid rgba(255,107,53,.3);}
+  .ct-sl{background:rgba(176,108,255,.10);color:var(--purple);border:1px solid rgba(176,108,255,.3);}
+  .ct-bl{background:rgba(57,255,133,.10);color:var(--green);border:1px solid rgba(57,255,133,.3);}
+  .arrow{color:var(--muted);margin:0 4px;}
+
+  /* options */
+  .opts{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:6px;}
+  .opts3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-top:6px;}
+  .card{background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:11px 13px;}
+  .card.highlight{border-color:rgba(255,68,102,.4);background:rgba(255,68,102,.03);}
+  .card label{font-size:.62rem;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;display:block;margin-bottom:6px;}
+  .card.highlight label{color:rgba(255,68,102,.9);}
+  .card select,.card input[type=range]{width:100%;background:var(--bg);border:1px solid var(--border);color:var(--text);font-family:'Share Tech Mono',monospace;font-size:.74rem;padding:6px 8px;border-radius:5px;outline:none;appearance:none;cursor:pointer;}
+  .card select:focus{border-color:var(--accent);}
+  input[type=range]{-webkit-appearance:none;height:4px;background:var(--border);border:none!important;padding:0!important;cursor:pointer;margin-top:4px;}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:13px;height:13px;background:var(--accent);border-radius:50%;cursor:pointer;box-shadow:0 0 6px rgba(0,212,255,.5);}
+  .rrow{display:flex;justify-content:space-between;font-size:.58rem;color:var(--muted);margin-top:3px;}
+  .va{color:var(--accent);}
+  .vb{color:var(--accent2);}
+  .vc{color:var(--purple);}
+  .vd{color:var(--green);}
+  .ve{color:var(--yellow);}
+  .vr{color:var(--red);}
+
+  /* LUFS section */
+  .lufs-card{
+    background:var(--panel);border:1px solid rgba(255,68,102,.35);
+    border-radius:8px;padding:13px 15px;margin-top:6px;
+  }
+  .lufs-header{
+    display:flex;align-items:center;gap:10px;margin-bottom:10px;
+  }
+  .lufs-header .icon{font-size:1.1rem;}
+  .lufs-header .title{font-family:'Orbitron',sans-serif;font-size:.72rem;color:var(--red);letter-spacing:.1em;}
+  .lufs-header .sub{font-size:.62rem;color:var(--muted);margin-left:auto;}
+  .lufs-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;}
+  .lufs-field label{font-size:.6rem;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;display:block;margin-bottom:5px;}
+  .lufs-field select,.lufs-field input[type=range]{width:100%;background:var(--bg);border:1px solid var(--border);color:var(--text);font-family:'Share Tech Mono',monospace;font-size:.74rem;padding:6px 8px;border-radius:5px;outline:none;appearance:none;cursor:pointer;}
+  .lufs-meter{
+    margin-top:10px;height:6px;background:var(--border);border-radius:3px;overflow:hidden;
+  }
+  .lufs-fill{height:100%;width:0%;border-radius:3px;transition:width 0.4s,background 0.3s;background:linear-gradient(90deg,var(--green),var(--yellow),var(--red));}
+
+  /* toggles */
+  .tgrid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:7px;margin-top:6px;}
+  .ti{display:flex;align-items:center;gap:9px;background:var(--panel);border:1px solid var(--border);border-radius:7px;padding:9px 11px;cursor:pointer;transition:border-color .2s;}
+  .ti:hover{border-color:var(--muted);}
+  .ti.on{border-color:rgba(0,212,255,.32);}
+  .ti-txt{font-size:.64rem;color:var(--muted);letter-spacing:.05em;line-height:1.4;}
+  .ti.on .ti-txt{color:var(--text);}
+  .sw{width:28px;height:15px;border-radius:8px;background:var(--border);position:relative;flex-shrink:0;transition:background .22s;}
+  .sw::after{content:'';position:absolute;top:2px;left:2px;width:11px;height:11px;border-radius:50%;background:var(--muted);transition:left .22s,background .22s;}
+  .ti.on .sw{background:rgba(0,212,255,.22);}
+  .ti.on .sw::after{left:15px;background:var(--accent);}
+
+  .path-row{display:flex;gap:7px;align-items:center;}
+  .path-row input,.path-inp{flex:1;background:var(--panel);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:'Share Tech Mono',monospace;font-size:.72rem;padding:8px 11px;outline:none;transition:border-color .2s;width:100%;}
+  .path-row input:focus,.path-inp:focus{border-color:var(--accent);}
+  .path-hint{font-size:.61rem;color:var(--muted);margin-top:4px;}
+
+  #runBtn{
+    margin-top:20px;width:100%;padding:14px;
+    background:transparent;border:1.5px solid var(--accent);
+    border-radius:8px;color:var(--accent);
+    font-family:'Orbitron',sans-serif;font-size:.8rem;letter-spacing:.2em;text-transform:uppercase;
+    cursor:pointer;position:relative;overflow:hidden;transition:background .2s,box-shadow .2s;
+  }
+  #runBtn:hover{background:rgba(0,212,255,.07);box-shadow:0 0 24px rgba(0,212,255,.28);}
+  #runBtn:active{transform:scale(.99);}
+  #runBtn:disabled{border-color:var(--muted);color:var(--muted);cursor:default;box-shadow:none;}
+  .scan{position:absolute;top:0;left:-100%;width:100%;height:100%;background:linear-gradient(90deg,transparent,rgba(0,212,255,.13),transparent);animation:sc 2s linear infinite;pointer-events:none;}
+  @keyframes sc{to{left:100%;}}
+
+  .status-bar{margin-top:12px;display:flex;align-items:center;gap:9px;font-size:.7rem;}
+  .sdot{width:8px;height:8px;border-radius:50%;background:var(--muted);flex-shrink:0;transition:background .3s;}
+  .sdot.running{background:var(--yellow);animation:blink .7s step-start infinite;}
+  .sdot.done{background:var(--green);box-shadow:0 0 8px var(--green);}
+  .sdot.error{background:#ff4444;}
+  @keyframes blink{50%{opacity:0;}}
+  #stxt{color:var(--yellow);}
+  #stxt.done{color:var(--green);}
+  #stxt.error{color:#ff4444;}
+  .prog-wrap{margin-top:7px;height:3px;background:var(--border);border-radius:2px;overflow:hidden;display:none;}
+  .prog-fill{height:100%;width:40%;background:linear-gradient(90deg,var(--accent),var(--green));border-radius:2px;animation:slide 1.2s linear infinite;}
+  @keyframes slide{0%{transform:translateX(-200%);}100%{transform:translateX(350%);}}
+
+  #output{margin-top:12px;background:#040609;border:1px solid var(--border);border-radius:8px;padding:13px 15px;font-size:.68rem;color:var(--green);white-space:pre-wrap;word-break:break-all;max-height:240px;overflow-y:auto;display:none;line-height:1.65;}
+  #output::-webkit-scrollbar{width:4px;}
+  #output::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px;}
+
+  .info-box{margin-top:10px;background:rgba(0,212,255,.03);border:1px solid rgba(0,212,255,.15);border-radius:7px;padding:11px 14px;font-size:.66rem;color:#7aaabb;line-height:1.8;}
+  .info-box strong{color:var(--accent);}
+
+  hr{border:none;border-top:1px solid var(--border);margin:20px 0 0;}
+  footer{margin-top:22px;display:flex;justify-content:space-between;align-items:center;font-size:.58rem;color:var(--muted);border-top:1px solid var(--border);padding-top:12px;}
+</style>
+</head>
+<body>
+<div class="wrapper">
+
+  <header>
+    <div class="logo">⬍</div>
+    <div class="htxt">
+      <h1>Surround Matrix · Universal Up/Downmixer</h1>
+      <p>Stereo ↔ 5.1 ↔ 7.1 · All Channels · Background Instruments · LUFS Limiter</p>
+    </div>
+    <div class="badge">v5</div>
+    <div class="badge2">LOSSLESS + LOSSY</div>
+  </header>
+
+  <div class="slbl">Direction</div>
+  <div class="opts" style="grid-template-columns:1fr auto 1fr;align-items:end;">
+    <div class="dir-select">
+      <label>Input Channel Layout</label>
+      <select id="inFmt" onchange="onDirectionChange()">
+        <option value="stereo">Stereo (2.0)</option>
+        <option value="51">5.1 (FL FR FC LFE BL BR)</option>
+        <option value="71" selected>7.1 (FL FR FC LFE BL BR SL SR)</option>
+      </select>
+    </div>
+    <div class="dir-arrow">→</div>
+    <div class="dir-select">
+      <label>Output Channel Layout</label>
+      <select id="outFmt" onchange="onDirectionChange()">
+        <option value="stereo" selected>Stereo (2.0)</option>
+        <option value="51">5.1 (FL FR FC LFE BL BR)</option>
+        <option value="71">7.1 (FL FR FC LFE BL BR SL SR)</option>
+      </select>
+    </div>
+  </div>
+  <div class="dir-summary" id="dirSummary"></div>
+
+  <div class="slbl">Input File — 7.1 / Dolby Atmos</div>
+  <div id="dropzone">
+    <span class="dz-icon">📂</span>
+    <div class="dz-main">Drag & Drop 7.1 / Atmos File</div>
+    <div class="dz-sub">FLAC · WAV · MKV · TrueHD · DTS-MA · MP4 — all channels will be preserved</div>
+  </div>
+  <input type="file" id="fileInput" hidden accept="audio/*,video/*,.flac,.wav,.mkv,.mp4,.truehd,.dts">
+  <div id="fileInfo"></div>
+
+  <div id="channelMapSection">
+  <div class="slbl">Input Channel Map</div>
+  <div class="ch-grid" id="channelMap">
+    <div class="ch" id="ch-FL"><div class="lbl">FL</div><div class="dot">◈</div><div class="role">Front L</div></div>
+    <div class="ch" id="ch-FC"><div class="lbl">FC</div><div class="dot">◈</div><div class="role">Centre</div></div>
+    <div class="ch" id="ch-FR"><div class="lbl">FR</div><div class="dot">◈</div><div class="role">Front R</div></div>
+    <div class="ch" id="ch-LFE"><div class="lbl">LFE</div><div class="dot">◉</div><div class="role">Sub</div></div>
+    <div class="ch" id="ch-SL"><div class="lbl">SL</div><div class="dot">◈</div><div class="role">Side L</div></div>
+    <div class="ch" id="ch-SR"><div class="lbl">SR</div><div class="dot">◈</div><div class="role">Side R</div></div>
+    <div class="ch" id="ch-BL"><div class="lbl">BL</div><div class="dot">◈</div><div class="role">Rear L</div></div>
+    <div class="ch" id="ch-BR"><div class="lbl">BR</div><div class="dot">◈</div><div class="role">Rear R</div></div>
+    <div class="ch out"><div class="lbl">OUT L</div><div class="dot">▶</div><div class="role">Stereo L</div></div>
+    <div class="ch out"><div class="lbl">OUT R</div><div class="dot">▶</div><div class="role">Stereo R</div></div>
+  </div>
+
+  <!-- MIX PATH DIAGRAM -->
+  <div class="slbl">Mix Formula — All Channels Included</div>
+  <div class="mix-diagram">
+    <div class="row">
+      <span style="color:var(--text)">OUT L =</span>
+      <span class="ch-tag ct-fl">FL×1.0</span><span class="arrow">+</span>
+      <span class="ch-tag ct-fc">FC×0.707</span><span class="arrow">+</span>
+      <span class="ch-tag ct-lfe">LFE×0.40</span><span class="arrow">+</span>
+      <span class="ch-tag ct-sl">SL×0.707</span><span class="arrow">+</span>
+      <span class="ch-tag ct-bl">BL×0.650</span>
+    </div>
+    <div class="row" style="margin-top:6px">
+      <span style="color:var(--text)">OUT R =</span>
+      <span class="ch-tag ct-fl">FR×1.0</span><span class="arrow">+</span>
+      <span class="ch-tag ct-fc">FC×0.707</span><span class="arrow">+</span>
+      <span class="ch-tag ct-lfe">LFE×0.40</span><span class="arrow">+</span>
+      <span class="ch-tag ct-sl">SR×0.707</span><span class="arrow">+</span>
+      <span class="ch-tag ct-bl">BR×0.650</span>
+    </div>
+    <div style="margin-top:8px;font-size:.61rem;color:var(--muted)">
+      + <span style="color:var(--purple)">Detail recovery pass</span>: quiet/mid-panned background content re-extracted and blended back at full level before any limiting (when enabled below).
+    </div>
+  </div>
+
+  <div class="info-box">
+    <strong>Why the old version lost background instruments:</strong> The side-channel encoding approach
+    used <code>(L−R)/2</code> to carry spatial data — but instruments panned near centre have nearly
+    equal L/R energy, so they cancel out in the side signal and disappear.
+    This version uses a <strong>full additive fold</strong> — every channel is summed with
+    equal-power coefficients so nothing is ever subtracted or cancelled.
+  </div>
+  </div>
+
+  <!-- UPMIX-ONLY CONTROLS -->
+  <div id="upmixSection" style="display:none">
+    <div class="slbl">Upmix Derivation — used whenever output has more channels than input</div>
+    <div class="tgrid" style="grid-template-columns:1fr">
+      <div class="ti on" id="tog-lfe-derive" onclick="toggle(this)">
+        <div class="sw"></div><div class="ti-txt">Preserve Bass (LFE Derivation) — untoggle to send silence to the LFE channel instead, keeping all bass in FL/FR as-is</div>
+      </div>
+    </div>
+    <div class="opts3" style="margin-top:8px">
+      <div class="card">
+        <label>Center Extract Level <span class="va" id="cxVal">-3.0 dB</span></label>
+        <input type="range" id="cxSlider" min="-12" max="0" step="0.5" value="-3.0">
+        <div class="rrow"><span>Quiet</span><span>Full</span></div>
+      </div>
+      <div class="card">
+        <label>LFE Derive Level <span class="va" id="lxVal">-10.5 dB</span></label>
+        <input type="range" id="lxSlider" min="-20" max="0" step="0.5" value="-10.5">
+        <div class="rrow"><span>Off</span><span>Full</span></div>
+      </div>
+      <div class="card">
+        <label>Surround Derive Level <span class="va" id="sxVal">-4.4 dB</span></label>
+        <input type="range" id="sxSlider" min="-16" max="0" step="0.5" value="-4.4">
+        <div class="rrow"><span>Off</span><span>Full</span></div>
+      </div>
+    </div>
+    <div class="info-box">
+      <strong>Honest limitation:</strong> upmixing cannot recover audio that was never recorded.
+      Center = 0.5×(FL+FR), LFE = lowpassed mono sum, surrounds = highpassed L−R difference
+      signal (phase-inverted between channel pairs) — all plausible derivations from what's
+      already in the source, not reconstruction of a discrete original mix. For Stereo→7.1,
+      SL/SR and BL/BR receive the same derived signal — no front/back differentiation is
+      attempted, since that needs content that isn't there.
+    </div>
+  </div>
+
+  <!-- MIX COEFFICIENTS -->
+  <div id="downmixSection">
+  <div class="slbl">Channel Mix Coefficients</div>
+  <div class="opts">
+    <div class="card">
+      <label>FC Centre Level  <span class="ve" id="fcVal">70.7%</span></label>
+      <input type="range" id="fcSlider" min="0" max="100" step="1" value="70.7">
+      <div class="rrow"><span>Silent</span><span>Full (−0dB)</span></div>
+    </div>
+    <div class="card">
+      <label>LFE Sub Level  <span class="vb" id="lfeVal">40%</span></label>
+      <input type="range" id="lfeSlider" min="0" max="100" step="5" value="40">
+      <div class="rrow"><span>Off</span><span>Full</span></div>
+    </div>
+    <div class="card" id="slCard">
+      <label>SL/SR Surround Level  <span class="vc" id="slVal">70.7%</span></label>
+      <input type="range" id="slSlider" min="0" max="100" step="1" value="70.7">
+      <div class="rrow"><span>Off</span><span>Full</span></div>
+    </div>
+    <div class="card">
+      <label>BL/BR Rear Level  <span class="vd" id="blVal">65%</span></label>
+      <input type="range" id="blSlider" min="0" max="100" step="5" value="65">
+      <div class="rrow"><span>Off</span><span>Full</span></div>
+    </div>
+    <div class="card">
+      <label>Detail Recovery Blend  <span class="va" id="drVal">30%</span></label>
+      <input type="range" id="drSlider" min="0" max="60" step="5" value="30">
+      <div class="rrow"><span>Off</span><span>Heavy</span></div>
+    </div>
+    <div class="card">
+      <label>Stereo Width (extrastereo)  <span class="va" id="xsVal">1.00×</span></label>
+      <input type="range" id="xsSlider" min="0.8" max="1.8" step="0.05" value="1.0">
+      <div class="rrow"><span>Narrow</span><span>Wide</span></div>
+    </div>
+    <div class="card">
+      <label>Surround Bass Crossover  <span class="va" id="xoVal">100 Hz</span></label>
+      <input type="range" id="xoSlider" min="0" max="150" step="10" value="100">
+      <div class="rrow"><span>Off (full-range)</span><span>150 Hz</span></div>
+      <div style="font-size:.6rem;color:var(--muted);margin-top:6px;line-height:1.6;">
+        Highpasses SL/SR/BL/BR before folding so only LFE carries deep bass —
+        fixes phase-smeared/uncomfortable bass on <strong>real discrete surround
+        mixes</strong> (movies, native Atmos), where rear channels are independently
+        mixed and can be out of phase with the front. Set to <strong>Off</strong>
+        for content where the surrounds are <strong>synthetically upmixed from
+        stereo</strong> (e.g. Atmos Music from a stereo source) — there, the
+        surround bass is just a phase-correlated copy of the front bass already,
+        so highpassing it only removes energy and dulls the low end instead of
+        fixing anything.
+      </div>
+    </div>
+  </div>
+
+  <div class="info-box" style="margin-top:10px">
+    <strong>Which setting for which source?</strong> Real 7.1/Atmos movie or music mixes
+    with independently-authored surround channels → leave crossover at 100 Hz (default).
+    Stereo-derived/upmixed-to-7.1 sources (like your Atmos Music workflow: stereo →
+    synthetic 7.1 → downmix) → set crossover to <strong>Off</strong>.
+  </div>
+  </div>
+
+  <!-- LUFS LIMITER -->
+  <div class="slbl">LUFS Limiter / Loudness</div>
+  <div class="lufs-card">
+    <div class="lufs-header">
+      <span class="icon">🔊</span>
+      <span class="title">Integrated Loudness Limiter</span>
+      <span class="sub">EBU R128 · ITU-R BS.1770 · True Peak</span>
+    </div>
+    <div class="lufs-grid">
+      <div class="lufs-field">
+        <label>Target LUFS  <span class="vr" id="lufsVal">−18 LUFS</span></label>
+        <input type="range" id="lufsSlider" min="-24" max="-6" step="1" value="-18">
+        <div class="rrow"><span>−24 (quiet)</span><span>−6 (loud)</span></div>
+      </div>
+      <div class="lufs-field">
+        <label>True Peak Ceiling  <span class="vr" id="tpVal">−1.5 dBTP</span></label>
+        <input type="range" id="tpSlider" min="-3" max="0" step="0.5" value="-1.5">
+        <div class="rrow"><span>−3 dBTP</span><span>0 dBTP</span></div>
+      </div>
+      <div class="lufs-field">
+        <label>LRA Range  <span class="va" id="lraVal">13 LU</span></label>
+        <input type="range" id="lraSlider" min="4" max="20" step="1" value="13">
+        <div class="rrow"><span>4 (dense)</span><span>20 (dynamic)</span></div>
+      </div>
+    </div>
+    <div class="lufs-meter" id="lufsMeter">
+      <div class="lufs-fill" id="lufsFill"></div>
+    </div>
+    <div style="font-size:.6rem;color:var(--muted);margin-top:5px;">
+      Loudness target: <span class="vr" id="lufsDisplay">−18 LUFS</span> · True Peak: <span class="vr" id="tpDisplay">−1.5 dBTP</span> · Dynamic range: <span class="va" id="lraDisplay">13 LU</span>
+      <span style="margin-left:12px;color:var(--muted)">Presets:</span>
+      <span class="preset" onclick="setLufsPreset(-14,-1.5,11)" style="cursor:pointer;color:var(--accent);margin-left:8px;">Streaming</span>
+      <span class="preset" onclick="setLufsPreset(-9,-1,8)" style="cursor:pointer;color:var(--yellow);margin-left:8px;">Loud Master</span>
+      <span class="preset" onclick="setLufsPreset(-18,-1.5,13)" style="cursor:pointer;color:var(--green);margin-left:8px;">Film/TV</span>
+      <span class="preset" onclick="setLufsPreset(-23,-1.5,20)" style="cursor:pointer;color:var(--purple);margin-left:8px;">Broadcast</span>
+    </div>
+  </div>
+
+  <!-- DETAIL EQ -->
+  <div id="eqSection">
+  <div class="slbl">Detail Preservation EQ</div>
+  <div class="opts3">
+    <div class="card">
+      <label>Sub Shelf 40 Hz  <span class="vb" id="eq1Val">+1.0 dB</span></label>
+      <input type="range" id="eq1Slider" min="-3" max="6" step="0.5" value="1.0">
+      <div class="rrow"><span>−3</span><span>+6 dB</span></div>
+    </div>
+    <div class="card">
+      <label>Mud Cut 250 Hz  <span class="va" id="eq2Val">−0.5 dB</span></label>
+      <input type="range" id="eq2Slider" min="-6" max="3" step="0.5" value="-0.5">
+      <div class="rrow"><span>−6</span><span>+3 dB</span></div>
+    </div>
+    <div class="card">
+      <label>Presence 3.5 kHz  <span class="va" id="eq3Val">+0.5 dB</span></label>
+      <input type="range" id="eq3Slider" min="-4" max="4" step="0.5" value="0.5">
+      <div class="rrow"><span>−4</span><span>+4 dB</span></div>
+    </div>
+    <div class="card">
+      <label>Hi Presence 8 kHz  <span class="va" id="eq4Val">+0.5 dB</span></label>
+      <input type="range" id="eq4Slider" min="-4" max="4" step="0.5" value="0.5">
+      <div class="rrow"><span>−4</span><span>+4 dB</span></div>
+    </div>
+    <div class="card">
+      <label>Air Shelf 14 kHz  <span class="va" id="eq5Val">+1.0 dB</span></label>
+      <input type="range" id="eq5Slider" min="-4" max="5" step="0.5" value="1.0">
+      <div class="rrow"><span>−4</span><span>+5 dB</span></div>
+    </div>
+    <div class="card">
+      <label>Harsh Notch 2.2kHz  <span class="va" id="eq6Val">−1.0 dB</span></label>
+      <input type="range" id="eq6Slider" min="-6" max="0" step="0.5" value="-1.0">
+      <div class="rrow"><span>−6</span><span>0 dB</span></div>
+    </div>
+  </div>
+  </div>
+
+  <!-- PEAK LIMITER -->
+  <div class="slbl">Peak / True-Peak Limiter</div>
+  <div class="lufs-card" style="border-color:rgba(255,204,0,.32);">
+    <div class="lufs-header">
+      <span class="icon">🔒</span>
+      <span class="title" style="color:var(--yellow);">True-Peak Hard Limiter</span>
+      <span class="sub">Pre-LUFS · Post-LUFS · Fade-Out Protection</span>
+    </div>
+    <div style="font-size:.65rem;color:#887840;line-height:1.8;margin-bottom:10px;">
+      Runs <strong style="color:var(--yellow)">before</strong> and <strong style="color:var(--yellow)">after</strong> loudnorm.
+      Pre-limiter stops existing overs skewing LUFS analysis.
+      Post-limiter hard-clamps anything loudnorm's gain boost pushes over ceiling —
+      including fade-outs that loudnorm incorrectly raises.
+      Attack default raised to 25ms: a 20-40Hz bass cycle is 25-50ms long, so a
+      faster attack forces the limiter to change gain mid-cycle, which is heard as
+      distortion on the bass itself, not just "loudness." 25ms gives it room to react
+      smoothly across a full cycle without ever letting a sample exceed the ceiling.
+    </div>
+    <div class="lufs-grid">
+      <div class="lufs-field">
+        <label>Peak Ceiling  <span style="color:var(--yellow)" id="pkVal">−1.5 dB</span></label>
+        <input type="range" id="pkSlider" min="-3" max="0" step="0.5" value="-1.5">
+        <div class="rrow"><span>−3 dB</span><span>0 dB</span></div>
+      </div>
+      <div class="lufs-field">
+        <label>Attack (ms)  <span style="color:var(--yellow)" id="pkAtkVal">25 ms</span></label>
+        <input type="range" id="pkAtkSlider" min="0.1" max="80" step="0.1" value="25">
+        <div class="rrow"><span>0.1 ms</span><span>80 ms</span></div>
+      </div>
+      <div class="lufs-field">
+        <label>Release (ms)  <span style="color:var(--yellow)" id="pkRelVal">100 ms</span></label>
+        <input type="range" id="pkRelSlider" min="1" max="8000" step="10" value="100">
+        <div class="rrow"><span>1 ms</span><span>8000 ms</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PROCESSING MODULES -->
+  <div class="slbl">Processing Modules</div>
+  <div class="tgrid">
+    <div class="ti on" id="tog-fold" onclick="toggle(this)">
+      <div class="sw"></div><div class="ti-txt">Full Channel<br>Fold Mix</div>
+    </div>
+    <div class="ti" id="tog-detail" onclick="toggle(this)">
+      <div class="sw"></div><div class="ti-txt">Background<br>Detail Recovery</div>
+    </div>
+    <div class="ti" id="tog-haas" onclick="toggle(this)">
+      <div class="sw"></div><div class="ti-txt">Haas ITD<br>Surround Cue</div>
+    </div>
+    <div class="ti" id="tog-eq" onclick="toggle(this)">
+      <div class="sw"></div><div class="ti-txt">Detail<br>Preserve EQ</div>
+    </div>
+    <div class="ti" id="tog-lufs" onclick="toggle(this)">
+      <div class="sw"></div><div class="ti-txt">LUFS<br>Limiter</div>
+    </div>
+    <div class="ti on" id="tog-peak" onclick="toggle(this)">
+      <div class="sw"></div><div class="ti-txt">Peak<br>Limiter</div>
+    </div>
+    <div class="ti on" id="tog-dc" onclick="toggle(this)">
+      <div class="sw"></div><div class="ti-txt">DC Offset<br>Remove</div>
+    </div>
+  </div>
+
+  <!-- FFMPEG -->
+  <div class="slbl">Sample Rate</div>
+  <div class="opts" style="grid-template-columns:1fr">
+    <div class="card">
+      <select id="sampleRate">
+        <option value="48000">48 kHz (Broadcast)</option>
+        <option value="96000">96 kHz (Hi-Res)</option>
+        <option value="192000">192 kHz (Studio)</option>
+        <option value="44100">44.1 kHz</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="slbl">Output Format</div>
+  <div style="font-size:.62rem;color:var(--muted);margin-bottom:6px;">Lossless</div>
+  <div class="fmt-grid" id="fmtGridLossless">
+    <div class="fmt-btn sel" data-fmt="flac" onclick="selectFormat('flac')">FLAC<span class="sub">24-bit</span></div>
+    <div class="fmt-btn" data-fmt="wav" onclick="selectFormat('wav')">WAV<span class="sub">24-bit PCM</span></div>
+    <div class="fmt-btn" data-fmt="alac" onclick="selectFormat('alac')">ALAC<span class="sub">Apple Lossless</span></div>
+  </div>
+  <div style="font-size:.62rem;color:var(--muted);margin:10px 0 6px;">Lossy (transparent bitrates)</div>
+  <div class="fmt-grid" id="fmtGridLossy">
+    <div class="fmt-btn" data-fmt="opus" onclick="selectFormat('opus')">Opus<span class="sub">Best quality/size</span></div>
+    <div class="fmt-btn" data-fmt="aac" onclick="selectFormat('aac')">AAC<span class="sub">Wide compatibility</span></div>
+    <div class="fmt-btn" data-fmt="vorbis" onclick="selectFormat('vorbis')">Ogg Vorbis<span class="sub">Open format</span></div>
+    <div class="fmt-btn" data-fmt="mp3" id="mp3Btn" onclick="selectFormat('mp3')">MP3<span class="sub" id="mp3Sub">Max compatibility</span></div>
+  </div>
+
+  <div class="opts" id="bitrateRow" style="display:none; margin-top:10px">
+    <div class="card">
+      <label>Bitrate (stereo-equivalent) <span class="va" id="brVal">320 kbps</span></label>
+      <input type="range" id="brSlider" min="128" max="510" step="16" value="320">
+      <div class="path-hint" id="brNote"></div>
+    </div>
+  </div>
+
+  <div class="card" id="aacContainerCard" style="display:none; margin-top:10px">
+    <label style="text-transform:none;letter-spacing:0;"><span id="aacContainerLbl">Container: Raw ADTS (.aac) — NO metadata or art support</span></label>
+    <div class="tgrid" style="grid-template-columns:1fr">
+      <div class="ti on" id="aacRawToggle" onclick="toggle(this); updateAacContainerLabel();"><div class="sw"></div><div class="ti-txt">Raw ADTS (.aac) — untoggle for .m4a with metadata/art</div></div>
+    </div>
+  </div>
+
+  <div class="card" id="oggArtCard" style="display:none; margin-top:10px">
+    <label style="text-transform:none;letter-spacing:0;">Cover Art for Opus/Vorbis (optional — auto-detected for FLAC/MP3/MKA/M4A/Ogg sources)</label>
+    <div class="path-hint" style="margin-bottom:8px">
+      Ogg containers use a base64 METADATA_BLOCK_PICTURE tag rather than a muxed picture stream.
+      Auto-detected automatically for most source types when you load a file below; upload manually
+      here only as a fallback if auto-detection doesn't find anything.
+    </div>
+    <input type="file" id="oggArtInput" accept="image/*">
+    <div id="oggArtInfo" style="font-size:.66rem; color:var(--green); margin-top:8px;"></div>
+  </div>
+
+  <div class="path-hint" id="metaSummary" style="margin-top:10px"></div>
+
+  <div class="slbl">FFmpeg Executable</div>
+  <div class="path-row">
+    <input type="text" id="ffmpegPath"
+      value="C:\Users\Angel\Documents\ffmpeg-8.0.1-full_build\bin\ffmpeg.exe"
+      placeholder="Path to ffmpeg.exe">
+  </div>
+
+  <div class="slbl">Output Directory (optional)</div>
+  <input class="path-inp" type="text" id="outDir" placeholder="Leave blank — saves alongside source">
+  <div class="path-hint" id="outDirHint">Output tagged: filename + " - Stereo-Full.flac"</div>
+
+  <button id="runBtn" onclick="run()">
+    <div class="scan"></div>
+    ▶&nbsp;&nbsp;Run Full Preservation Downmix
+  </button>
+
+  <div class="status-bar">
+    <div class="sdot idle" id="sdot"></div>
+    <span id="stxt">Idle — load a 7.1 file to begin</span>
+  </div>
+  <div class="prog-wrap" id="progWrap"><div class="prog-fill"></div></div>
+  <pre id="output"></pre>
+
+  <hr>
+  <footer>
+    <span>7.1 → STEREO FULL PRESERVATION DOWNMIXER v3 · Electron / FFmpeg</span>
+    <span id="bstamp"></span>
+  </footer>
+</div>
+
+<script>
+let filePath = '';
+const CHANNELS = ['FL','FC','FR','LFE','SL','SR','BL','BR'];
+
+// ── Slider bindings ──────────────────────────────────────────────────────────
+const sliders = [
+  ['fcSlider',   'fcVal',   v => parseFloat(v).toFixed(1) + '%'],
+  ['lfeSlider',  'lfeVal',  v => v + '%'],
+  ['slSlider',   'slVal',   v => parseFloat(v).toFixed(1) + '%'],
+  ['blSlider',   'blVal',   v => v + '%'],
+  ['drSlider',   'drVal',   v => v + '%'],
+  ['xsSlider',   'xsVal',   v => parseFloat(v).toFixed(2) + '×'],
+  ['xoSlider',   'xoVal',   v => (parseFloat(v) === 0 ? 'Off (full-range)' : v + ' Hz')],
+  ['eq1Slider',  'eq1Val',  v => (parseFloat(v) >= 0 ? '+' : '') + parseFloat(v).toFixed(1) + ' dB'],
+  ['eq2Slider',  'eq2Val',  v => (parseFloat(v) >= 0 ? '+' : '') + parseFloat(v).toFixed(1) + ' dB'],
+  ['eq3Slider',  'eq3Val',  v => (parseFloat(v) >= 0 ? '+' : '') + parseFloat(v).toFixed(1) + ' dB'],
+  ['eq4Slider',  'eq4Val',  v => (parseFloat(v) >= 0 ? '+' : '') + parseFloat(v).toFixed(1) + ' dB'],
+  ['eq5Slider',  'eq5Val',  v => (parseFloat(v) >= 0 ? '+' : '') + parseFloat(v).toFixed(1) + ' dB'],
+  ['eq6Slider',  'eq6Val',  v => (parseFloat(v) >= 0 ? '+' : '') + parseFloat(v).toFixed(1) + ' dB'],
+  ['lufsSlider', 'lufsVal', v => v + ' LUFS'],
+  ['tpSlider',   'tpVal',   v => parseFloat(v).toFixed(1) + ' dBTP'],
+  ['lraSlider',  'lraVal',  v => v + ' LU'],
+  ['pkSlider',   'pkVal',   v => parseFloat(v).toFixed(1) + ' dB'],
+  ['pkAtkSlider','pkAtkVal',v => v + ' ms'],
+  ['pkRelSlider','pkRelVal',v => v + ' ms'],
+  ['cxSlider',   'cxVal',   v => v + ' dB'],
+  ['lxSlider',   'lxVal',   v => v + ' dB'],
+  ['sxSlider',   'sxVal',   v => v + ' dB'],
+  ['brSlider',   'brVal',   v => v + ' kbps'],
+];
+sliders.forEach(([id, vid, fmt]) => {
+  const el = document.getElementById(id);
+  el.addEventListener('input', function () {
+    document.getElementById(vid).textContent = fmt(this.value);
+    if (id === 'lufsSlider') {
+      document.getElementById('lufsDisplay').textContent = this.value + ' LUFS';
+      updateLufsMeter();
+    }
+    if (id === 'tpSlider')  document.getElementById('tpDisplay').textContent  = parseFloat(this.value).toFixed(1) + ' dBTP';
+    if (id === 'lraSlider') document.getElementById('lraDisplay').textContent = this.value + ' LU';
+  });
+});
+
+function updateLufsMeter() {
+  const val  = parseFloat(document.getElementById('lufsSlider').value); // -24 to -6
+  const pct  = ((val - (-24)) / ((-6) - (-24))) * 100;
+  const fill = document.getElementById('lufsFill');
+  fill.style.width = pct + '%';
+}
+updateLufsMeter();
+
+function setLufsPreset(lufs, tp, lra) {
+  document.getElementById('lufsSlider').value = lufs;
+  document.getElementById('tpSlider').value   = tp;
+  document.getElementById('lraSlider').value  = lra;
+  document.getElementById('lufsVal').textContent  = lufs + ' LUFS';
+  document.getElementById('tpVal').textContent    = parseFloat(tp).toFixed(1) + ' dBTP';
+  document.getElementById('lraVal').textContent   = lra + ' LU';
+  document.getElementById('lufsDisplay').textContent = lufs + ' LUFS';
+  document.getElementById('tpDisplay').textContent   = parseFloat(tp).toFixed(1) + ' dBTP';
+  document.getElementById('lraDisplay').textContent  = lra + ' LU';
+  updateLufsMeter();
+}
+
+let selectedFormat = 'flac';
+let oggArtFile = null;
+let autoExtractedPictureBlock = null; // base64 METADATA_BLOCK_PICTURE, auto-found in source
+
+document.getElementById('oggArtInput')?.addEventListener('change', function(e){
+  if (e.target.files.length){
+    oggArtFile = e.target.files[0];
+    autoExtractedPictureBlock = null; // manual upload takes priority over auto-detect
+    document.getElementById('oggArtInfo').textContent = '✓ ' + oggArtFile.name + ' — will be embedded on next run';
+  }
+});
+
+// Bytes-to-base64 without huge string concatenation stalls on big images.
+function bytesToBase64(bytes){
+  let binary = '';
+  const chunk = 0x8000;
+  for (let i = 0; i < bytes.length; i += chunk){
+    binary += String.fromCharCode.apply(null, bytes.subarray(i, i + chunk));
+  }
+  return btoa(binary);
+}
+
+// FLAC embeds cover art as a PICTURE metadata block (type 6) whose payload
+// is byte-for-byte the SAME structure as the Ogg METADATA_BLOCK_PICTURE tag
+// (picture type, mime, description, dimensions, depth, colors, data — all
+// big-endian length-prefixed). So for FLAC sources we don't need to rebuild
+// anything: find the block, copy its raw bytes, base64 it directly.
+// Validated by extracting a real embedded picture this way and confirming
+// the image bytes come back identical to the source.
+function extractFlacPictureBlock(bytes){
+  if (bytes.length < 4 || String.fromCharCode(bytes[0],bytes[1],bytes[2],bytes[3]) !== 'fLaC') return null;
+  let pos = 4;
+  while (pos + 4 <= bytes.length){
+    const header = bytes[pos];
+    const isLast = (header & 0x80) !== 0;
+    const blockType = header & 0x7F;
+    const length = (bytes[pos+1] << 16) | (bytes[pos+2] << 8) | bytes[pos+3];
+    const blockStart = pos + 4;
+    if (blockType === 6){ // PICTURE
+      return bytes.subarray(blockStart, blockStart + length);
+    }
+    pos = blockStart + length;
+    if (isLast) break;
+  }
+  return null;
+}
+
+// MP3/ID3v2 stores art in an APIC frame with its own layout (text encoding
+// byte, null-terminated MIME, picture type byte, null-terminated
+// description, then raw image data) — different from the Xiph picture
+// block, so this rebuilds a proper METADATA_BLOCK_PICTURE from the parsed
+// fields using the same builder used for manually-uploaded art. Validated
+// against a real ID3v2.3 APIC frame — extracted image bytes matched the
+// source exactly.
+async function extractId3PictureBlock(bytes){
+  if (bytes.length < 10 || String.fromCharCode(bytes[0],bytes[1],bytes[2]) !== 'ID3') return null;
+  const size = ((bytes[6]&0x7f)<<21)|((bytes[7]&0x7f)<<14)|((bytes[8]&0x7f)<<7)|(bytes[9]&0x7f);
+  let pos = 10;
+  const tagEnd = 10 + size;
+  while (pos + 10 <= tagEnd){
+    const frameId = String.fromCharCode(bytes[pos],bytes[pos+1],bytes[pos+2],bytes[pos+3]);
+    if (frameId === '\0\0\0\0') break;
+    const frameSize = (bytes[pos+4]<<24)|(bytes[pos+5]<<16)|(bytes[pos+6]<<8)|bytes[pos+7];
+    const frameStart = pos + 10;
+    if (frameId === 'APIC'){
+      const fd = bytes.subarray(frameStart, frameStart + frameSize);
+      const encoding = fd[0];
+      let p = 1;
+      let mimeEnd = p; while (fd[mimeEnd] !== 0) mimeEnd++;
+      const mime = String.fromCharCode.apply(null, fd.subarray(p, mimeEnd));
+      p = mimeEnd + 1;
+      const picType = fd[p]; p += 1;
+      if (encoding === 1 || encoding === 2){
+        let descEnd = p; while (!(fd[descEnd]===0 && fd[descEnd+1]===0)) descEnd += 2;
+        p = descEnd + 2;
+      } else {
+        let descEnd = p; while (fd[descEnd] !== 0) descEnd++;
+        p = descEnd + 1;
+      }
+      const imgBytes = fd.subarray(p);
+      const dims = await getImageDimensions(mime, imgBytes);
+      return buildPictureBlockBytes(mime || 'image/jpeg', dims.w, dims.h, imgBytes);
+    }
+    pos = frameStart + frameSize;
+  }
+  return null;
+}
+
+// ── MATROSKA / MKA / MKV ────────────────────────────────────────────────
+// EBML binary structure — the same format your TrueHD/Atmos .mka extracts
+// use. Cover art lives as an "Attachment" (a generic embedded file, not a
+// picture-specific block like FLAC/ID3), found by walking:
+// Segment -> Attachments -> AttachedFile -> FileMimeType/FileName/FileData.
+// Validated against a real ffmpeg-muxed .mka with an attached image —
+// extracted bytes came back identical to the source.
+function readEbmlVint(bytes, pos, keepMarker){
+  const first = bytes[pos];
+  if (first === 0) throw new Error('invalid EBML vint');
+  let length = 1, mask = 0x80;
+  while (!(first & mask)){ mask >>= 1; length++; }
+  let value = keepMarker ? first : (first & (mask - 1));
+  for (let i = 1; i < length; i++) value = value * 256 + bytes[pos+i];
+  return {value, newPos: pos + length};
+}
+
+function ebmlFindChild(bytes, start, end, targetId){
+  let pos = start;
+  const results = [];
+  while (pos < end){
+    const idRes = readEbmlVint(bytes, pos, true);
+    const sizeRes = readEbmlVint(bytes, idRes.newPos, false);
+    const contentStart = sizeRes.newPos;
+    const contentEnd = contentStart + sizeRes.value;
+    if (idRes.value === targetId) results.push({start: contentStart, end: contentEnd});
+    pos = contentEnd;
+    if (pos <= idRes.newPos) break; // safety against malformed/zero-size loops
+  }
+  return results;
+}
+
+function extractMkaAttachment(bytes){
+  // EBML files start with this exact 4-byte header ID — bail immediately
+  // on anything else rather than attempting to walk non-EBML data (which
+  // can throw mid-parse and would otherwise abort the whole detection chain).
+  if (bytes.length < 4 || bytes[0]!==0x1A || bytes[1]!==0x45 || bytes[2]!==0xDF || bytes[3]!==0xA3) return null;
+  const SEGMENT = 0x18538067, ATTACHMENTS = 0x1941A469, ATTACHEDFILE = 0x61A7;
+  const FILENAME = 0x466E, FILEMIME = 0x4660, FILEDATA = 0x465C;
+  const segments = ebmlFindChild(bytes, 0, bytes.length, SEGMENT);
+  for (const seg of segments){
+    const segEnd = Math.min(seg.end, bytes.length);
+    const attachmentsList = ebmlFindChild(bytes, seg.start, segEnd, ATTACHMENTS);
+    for (const att of attachmentsList){
+      const files = ebmlFindChild(bytes, att.start, att.end, ATTACHEDFILE);
+      for (const f of files){
+        let mime = null, filedata = null;
+        const mimes = ebmlFindChild(bytes, f.start, f.end, FILEMIME);
+        const datas = ebmlFindChild(bytes, f.start, f.end, FILEDATA);
+        if (mimes.length) mime = String.fromCharCode.apply(null, bytes.subarray(mimes[0].start, mimes[0].end));
+        if (datas.length) filedata = bytes.subarray(datas[0].start, datas[0].end);
+        if (mime && filedata && mime.indexOf('image') === 0) return {mime, data: filedata};
+      }
+    }
+  }
+  return null;
+}
+
+// ── MP4 / M4A (ALAC, AAC) ────────────────────────────────────────────────
+// Box-based structure — cover art lives in moov/udta/meta/ilst/covr/data.
+// Validated against a real ffmpeg-muxed .m4a with attached art — extracted
+// bytes came back identical to the source.
+function parseMp4Boxes(bytes, start, end, path){
+  let pos = start;
+  const results = [];
+  while (pos + 8 <= end){
+    let size = (bytes[pos]<<24 | bytes[pos+1]<<16 | bytes[pos+2]<<8 | bytes[pos+3]) >>> 0;
+    const btype = String.fromCharCode(bytes[pos+4],bytes[pos+5],bytes[pos+6],bytes[pos+7]);
+    let headerSize = 8;
+    if (size === 1){
+      // 64-bit extended size — read as two 32-bit halves (files this large won't occur for a cover atom's parent chain in practice, but handle correctly)
+      const hi = (bytes[pos+8]<<24 | bytes[pos+9]<<16 | bytes[pos+10]<<8 | bytes[pos+11]) >>> 0;
+      const lo = (bytes[pos+12]<<24 | bytes[pos+13]<<16 | bytes[pos+14]<<8 | bytes[pos+15]) >>> 0;
+      size = hi * 4294967296 + lo;
+      headerSize = 16;
+    }
+    if (size === 0) size = end - pos;
+    const contentStart = pos + headerSize;
+    const contentEnd = pos + size;
+    results.push({btype, start: contentStart, end: contentEnd, path});
+    if (['moov','udta','meta','ilst','covr','trak','mdia'].indexOf(btype) !== -1){
+      const extra = (btype === 'meta') ? 4 : 0; // meta box has a 4-byte version/flags prefix
+      results.push(...parseMp4Boxes(bytes, contentStart+extra, contentEnd, path.concat(btype)));
+    }
+    pos = contentEnd;
+    if (size <= 0) break;
+  }
+  return results;
+}
+
+function extractMp4CoverArt(bytes){
+  const boxes = parseMp4Boxes(bytes, 0, bytes.length, []);
+  for (const b of boxes){
+    if (b.btype !== 'covr') continue;
+    const sub = bytes.subarray(b.start, b.end);
+    let subpos = 0;
+    while (subpos + 8 <= sub.length){
+      const ssize = (sub[subpos]<<24 | sub[subpos+1]<<16 | sub[subpos+2]<<8 | sub[subpos+3]) >>> 0;
+      const stype = String.fromCharCode(sub[subpos+4],sub[subpos+5],sub[subpos+6],sub[subpos+7]);
+      if (stype === 'data'){
+        // data atom: 8-byte header + 4-byte type flags + 4-byte locale, then payload
+        const payload = sub.subarray(subpos+16, subpos+ssize);
+        // sniff format from magic bytes rather than trusting an atom flag
+        const mime = (payload[0]===0xFF && payload[1]===0xD8) ? 'image/jpeg' : 'image/png';
+        return {mime, data: payload};
+      }
+      subpos += ssize;
+      if (ssize <= 0) break;
+    }
+  }
+  return null;
+}
+
+// ── OGG SOURCE (Opus/Vorbis being re-processed) ─────────────────────────
+// If the source itself is already Opus or Vorbis and already carries a
+// METADATA_BLOCK_PICTURE tag, carry it straight through rather than
+// requiring extraction — it's already in exactly the format we need.
+function extractOggExistingPicture(bytes){
+  let pos = 0;
+  const pages = [];
+  while (pos + 27 <= bytes.length){
+    if (!(bytes[pos]===0x4F && bytes[pos+1]===0x67 && bytes[pos+2]===0x67 && bytes[pos+3]===0x53)) break; // "OggS"
+    const numSegments = bytes[pos+26];
+    let pageDataLen = 0;
+    for (let i = 0; i < numSegments; i++) pageDataLen += bytes[pos+27+i];
+    const headerLen = 27 + numSegments;
+    pages.push({dataStart: pos+headerLen, dataEnd: pos+headerLen+pageDataLen});
+    pos = pos + headerLen + pageDataLen;
+  }
+  for (const p of pages){
+    const chunk = bytes.subarray(p.dataStart, p.dataEnd);
+    const asStr = String.fromCharCode.apply(null, chunk.subarray(0, Math.min(chunk.length, 8)));
+    let commentStart = null;
+    if (asStr.indexOf('OpusTags') === 0) commentStart = 8;
+    else if (chunk.length > 7 && chunk[0]===3 && String.fromCharCode.apply(null,chunk.subarray(1,7))==='vorbis') commentStart = 7;
+    if (commentStart === null) continue;
+    let p2 = commentStart;
+    const readU32LE = (o) => (chunk[o] | chunk[o+1]<<8 | chunk[o+2]<<16 | chunk[o+3]<<24) >>> 0;
+    const vendorLen = readU32LE(p2); p2 += 4 + vendorLen;
+    const commentCount = readU32LE(p2); p2 += 4;
+    for (let i = 0; i < commentCount; i++){
+      const clen = readU32LE(p2); p2 += 4;
+      const comment = chunk.subarray(p2, p2+clen); p2 += clen;
+      const prefix = 'METADATA_BLOCK_PICTURE=';
+      const prefixBytes = prefix.length;
+      const asAscii = String.fromCharCode.apply(null, comment.subarray(0, Math.min(comment.length, prefixBytes)));
+      if (asAscii === prefix){
+        const b64 = String.fromCharCode.apply(null, comment.subarray(prefixBytes));
+        return b64; // already a complete, valid METADATA_BLOCK_PICTURE base64 string
+      }
+    }
+  }
+  return null;
+}
+function buildPictureBlockBytes(mime, width, height, imgBytes){
+  const mimeBytes = new TextEncoder().encode(mime);
+  const descBytes = new TextEncoder().encode('');
+  const picType = 3, depth = 24, colors = 0;
+  const totalLen = 4 + (4+mimeBytes.length) + (4+descBytes.length) + 4+4+4+4+4 + imgBytes.length;
+  const buf = new ArrayBuffer(totalLen);
+  const view = new DataView(buf);
+  const out = new Uint8Array(buf);
+  let off = 0;
+  view.setUint32(off, picType, false); off += 4;
+  view.setUint32(off, mimeBytes.length, false); off += 4;
+  out.set(mimeBytes, off); off += mimeBytes.length;
+  view.setUint32(off, descBytes.length, false); off += 4;
+  out.set(descBytes, off); off += descBytes.length;
+  view.setUint32(off, width, false); off += 4;
+  view.setUint32(off, height, false); off += 4;
+  view.setUint32(off, depth, false); off += 4;
+  view.setUint32(off, colors, false); off += 4;
+  view.setUint32(off, imgBytes.length, false); off += 4;
+  out.set(imgBytes, off); off += imgBytes.length;
+  return out;
+}
+
+// Shared helper: get real pixel dimensions from raw image bytes via a
+// throwaway Image element (works for both extraction and manual-upload paths).
+async function getImageDimensions(mime, bytes){
+  return new Promise((resolve) => {
+    const blob = new Blob([bytes], {type: mime || 'image/jpeg'});
+    const url = URL.createObjectURL(blob);
+    const img = new Image();
+    img.onload = () => { URL.revokeObjectURL(url); resolve({w:img.naturalWidth, h:img.naturalHeight}); };
+    img.onerror = () => { URL.revokeObjectURL(url); resolve({w:0, h:0}); };
+    img.src = url;
+  });
+}
+
+async function tryAutoExtractArt(file){
+  autoExtractedPictureBlock = null;
+  const buf = await file.arrayBuffer();
+  const bytes = new Uint8Array(buf);
+
+  const safely = (fn) => { try { return fn(); } catch(e){ return null; } };
+  const safelyAsync = async (fn) => { try { return await fn(); } catch(e){ return null; } };
+
+  try {
+    // Ogg-source: already the exact tag format we need, carry it straight through.
+    const existingOggPic = safely(() => extractOggExistingPicture(bytes));
+    if (existingOggPic){
+      autoExtractedPictureBlock = existingOggPic;
+      document.getElementById('oggArtInfo').textContent = '✓ Cover art auto-detected from source (existing Ogg METADATA_BLOCK_PICTURE) — carried through as-is';
+      updateMetaSummary(selectedFormat);
+      return;
+    }
+
+    let block = safely(() => extractFlacPictureBlock(bytes));
+    let source = 'FLAC picture block';
+
+    if (!block){
+      const id3Result = await safelyAsync(() => extractId3PictureBlock(bytes));
+      if (id3Result){ block = id3Result; source = 'ID3v2 APIC frame'; }
+    }
+    if (!block){
+      const mka = safely(() => extractMkaAttachment(bytes));
+      if (mka){
+        const dims = await getImageDimensions(mka.mime, mka.data);
+        block = buildPictureBlockBytes(mka.mime, dims.w, dims.h, mka.data);
+        source = 'Matroska (.mka/.mkv) attachment';
+      }
+    }
+    if (!block){
+      const mp4 = safely(() => extractMp4CoverArt(bytes));
+      if (mp4){
+        const dims = await getImageDimensions(mp4.mime, mp4.data);
+        block = buildPictureBlockBytes(mp4.mime, dims.w, dims.h, mp4.data);
+        source = 'MP4/M4A covr atom';
+      }
+    }
+
+    if (block){
+      autoExtractedPictureBlock = bytesToBase64(block);
+      document.getElementById('oggArtInfo').textContent = '✓ Cover art auto-detected from source (' + source + ') — no upload needed';
+      updateMetaSummary(selectedFormat);
+    } else {
+      document.getElementById('oggArtInfo').textContent = 'No embedded art auto-detected in this source (WAV genuinely can\'t hold it; anything else unrecognized — upload manually above if you have a separate cover image).';
+    }
+  } catch(e){
+    document.getElementById('oggArtInfo').textContent = 'Auto-detection failed: ' + e.message;
+  }
+}
+
+const DIR_INFO = {
+  'stereo->51': {kind:'upmix', desc:'Derives FC (center sum), LFE (lowpassed sum), and BL/BR (phase-difference ambience) from the stereo source. No content recovery — synthesized from what is present.'},
+  'stereo->71': {kind:'upmix', desc:'Same derivation as Stereo→5.1, with the same derived surround signal also feeding SL/SR (no front/back differentiation possible from 2 channels).'},
+  '51->71': {kind:'upmix', desc:'FL/FR/FC/LFE/BL/BR pass through unchanged. SL/SR are derived from the FL/FR phase-difference signal, same technique as the stereo upmix.'},
+  '71->stereo': {kind:'downmix', desc:'Full additive fold of every channel into stereo, with bass-managed surrounds (see crossover below) so summed low end stays phase-coherent.'},
+  '71->51': {kind:'downmix', desc:'SL/SR fold into BL/BR (side merges into back) at 50/50, bass-managed by the same crossover. FL/FR/FC/LFE pass through unchanged.'},
+  '51->stereo': {kind:'downmix', desc:'Same fold as 7.1→Stereo, using only the single BL/BR rear pair (no separate side channels to fold).'}
+};
+
+function dirKey(){ return document.getElementById('inFmt').value + '->' + document.getElementById('outFmt').value; }
+
+function onDirectionChange(){
+  const inF = document.getElementById('inFmt').value;
+  const outF = document.getElementById('outFmt').value;
+  const chCount = {stereo:2, '51':6, '71':8};
+  const key = dirKey();
+  const summary = document.getElementById('dirSummary');
+
+  document.getElementById('channelMapSection').style.display = (inF === '71') ? 'block' : 'none';
+
+  if (inF === outF){
+    summary.innerHTML = '<strong>Same layout in and out</strong> — this will just run the safety chain (DC removal / limiter / format conversion) with no channel remixing.';
+    document.getElementById('downmixSection').style.display = 'none';
+    document.getElementById('eqSection').style.display = 'none';
+    document.getElementById('upmixSection').style.display = 'none';
+    updateMp3Availability();
+    updateOutDirHint();
+    return;
+  }
+
+  const info = DIR_INFO[key];
+  const isUpmix = chCount[outF] > chCount[inF];
+  summary.innerHTML = `<strong>${isUpmix ? 'UPMIX' : 'DOWNMIX'}</strong> — ${info.desc}`;
+
+  document.getElementById('downmixSection').style.display = isUpmix ? 'none' : 'block';
+  document.getElementById('eqSection').style.display = isUpmix ? 'none' : 'block';
+  document.getElementById('upmixSection').style.display = isUpmix ? 'block' : 'none';
+  document.getElementById('slCard').style.display = (outF === '51' && !isUpmix) ? 'none' : 'block';
+  updateMp3Availability();
+  updateOutDirHint();
+}
+
+function outFmtLabel(){
+  const outF = document.getElementById('outFmt').value;
+  return outF === 'stereo' ? 'Stereo' : (outF === '51' ? '5.1' : '7.1');
+}
+
+function getOutputExtension(){
+  if (selectedFormat === 'vorbis') return 'ogg';
+  if (selectedFormat === 'alac') return 'm4a';
+  if (selectedFormat === 'aac'){
+    const raw = document.getElementById('aacRawToggle') && isOn('aacRawToggle');
+    return raw ? 'aac' : 'm4a';
+  }
+  return selectedFormat; // flac, wav, opus, mp3 all match their format name
+}
+
+function updateOutDirHint(){
+  const hint = document.getElementById('outDirHint');
+  if (!hint) return;
+  hint.textContent = 'Output tagged: filename + " - ' + outFmtLabel() + '.' + getOutputExtension() + '"';
+}
+
+function selectFormat(fmt){
+  if (fmt === 'mp3' && document.getElementById('outFmt').value !== 'stereo'){
+    document.getElementById('status').className = 'err';
+    document.getElementById('status').textContent = 'MP3 only supports mono/stereo — set Output Channel Layout to Stereo first.';
+    return;
+  }
+  if (fmt === 'alac' && document.getElementById('outFmt').value === '71'){
+    document.getElementById('status').className = 'err';
+    document.getElementById('status').textContent = "ALAC drops a channel on 7.1 output (confirmed via testing — ffmpeg's ALAC encoder doesn't have a correct 8-channel layout mapping and silently reinterprets it as 7-channel 6.1). Use FLAC for lossless 7.1, or set output to Stereo/5.1 for ALAC.";
+    return;
+  }
+  selectedFormat = fmt;
+  document.querySelectorAll('.fmt-btn').forEach(b => b.classList.toggle('sel', b.dataset.fmt === fmt));
+  updateOutDirHint();
+  const lossy = (fmt === 'opus' || fmt === 'aac' || fmt === 'vorbis' || fmt === 'mp3');
+  document.getElementById('bitrateRow').style.display = lossy ? 'grid' : 'none';
+  document.getElementById('aacContainerCard').style.display = (fmt === 'aac') ? 'block' : 'none';
+  document.getElementById('oggArtCard').style.display = (fmt === 'opus' || fmt === 'vorbis') ? 'block' : 'none';
+  updateAacContainerLabel();
+  updateMetaSummary(fmt);
+  const note = document.getElementById('brNote');
+  if (fmt === 'opus') note.textContent = 'Opus is transparent for stereo music around 160-192kbps; 320kbps+ leaves large margin. Multichannel output scales bitrate up automatically by channel count.';
+  if (fmt === 'aac') note.textContent = "Uses ffmpeg's native AAC encoder (libfdk_aac is higher quality but excluded from most public ffmpeg builds due to licensing — swap the codec name in the command if you have it). 256-320kbps is transparent for most content.";
+  if (fmt === 'vorbis') note.textContent = 'Ogg Vorbis, open/patent-free format. Roughly comparable transparency to AAC at the same bitrate — 256-320kbps is a safe transparent target. Multichannel scales automatically.';
+  if (fmt === 'mp3') note.textContent = 'MP3 is stereo/mono only — locked out for 5.1/7.1 output. 320kbps CBR (or V0 VBR, used automatically) is the practical ceiling for this codec; it will never be as transparent as the others at the same size due to the format\'s age.';
+  if (fmt === 'alac') note.textContent = '';
+}
+
+function updateAacContainerLabel(){
+  const lbl = document.getElementById('aacContainerLbl');
+  if (!lbl) return;
+  const raw = isOn('aacRawToggle');
+  lbl.textContent = raw
+    ? 'Container: Raw ADTS (.aac) — NO metadata or art support'
+    : 'Container: MP4 (.m4a) — full metadata + cover art';
+  // Only the badge/summary for AAC itself — this function used to run
+  // unconditionally on every format selection and stomp the extension
+  // badge back to aac/m4a even when FLAC/Opus/etc. was actually selected.
+  if (selectedFormat === 'aac'){
+    updateOutDirHint();
+    updateMetaSummary('aac');
+  }
+}
+
+function updateMetaSummary(fmt){
+  const el = document.getElementById('metaSummary');
+  if (!el) return;
+  const raw = fmt === 'aac' && document.getElementById('aacRawToggle') && isOn('aacRawToggle');
+  const info = {
+    flac:   '<strong style="color:var(--green)">Tags + cover art both preserved.</strong>',
+    wav:    '<strong style="color:var(--yellow)">Tags only.</strong> WAV cannot hold a cover art stream at all — attempting it is a hard failure, so art is skipped for this format.',
+    alac:   '<strong style="color:var(--green)">Tags + cover art both preserved</strong> (MP4/.m4a container).',
+    opus:   (autoExtractedPictureBlock || oggArtFile)
+      ? '<strong style="color:var(--green)">Tags + cover art both preserved</strong> (' + (autoExtractedPictureBlock ? 'auto-detected from source' : 'uploaded art') + ', via base64 METADATA_BLOCK_PICTURE).'
+      : '<strong style="color:var(--yellow)">Tags preserved.</strong> No embedded art auto-detected in this source — upload cover art above if you have one separately.',
+    vorbis: (autoExtractedPictureBlock || oggArtFile)
+      ? '<strong style="color:var(--green)">Tags + cover art both preserved</strong> (' + (autoExtractedPictureBlock ? 'auto-detected from source' : 'uploaded art') + ', via base64 METADATA_BLOCK_PICTURE).'
+      : '<strong style="color:var(--yellow)">Tags preserved.</strong> No embedded art auto-detected in this source — upload cover art above if you have one separately.',
+    mp3:    '<strong style="color:var(--green)">Tags + cover art both preserved</strong> (ID3v2 APIC).',
+    aac:    raw
+      ? '<strong style="color:var(--red)">NO metadata or art at all.</strong> Raw ADTS has no container to hold them — confirmed via a hard ffmpeg failure when attempting it.'
+      : '<strong style="color:var(--green)">Tags + cover art both preserved</strong> (MP4/.m4a container).'
+  };
+  el.innerHTML = 'Metadata: ' + (info[fmt] || '');
+}
+
+function updateMp3Availability(){
+  const outF = document.getElementById('outFmt').value;
+  const isStereo = outF === 'stereo';
+  const is71 = outF === '71';
+
+  const mp3Btn = document.getElementById('mp3Btn');
+  mp3Btn.style.opacity = isStereo ? '1' : '.4';
+  document.getElementById('mp3Sub').textContent = isStereo ? 'Max compatibility' : 'Stereo output only';
+  if (!isStereo && selectedFormat === 'mp3') selectFormat('flac');
+
+  const alacBtn = document.querySelector('[data-fmt="alac"]');
+  if (alacBtn){
+    alacBtn.style.opacity = is71 ? '.4' : '1';
+    alacBtn.querySelector('.sub').textContent = is71 ? 'Drops a ch. on 7.1' : 'Apple Lossless';
+  }
+  if (is71 && selectedFormat === 'alac') selectFormat('flac');
+}
+
+// ── Dropzone ─────────────────────────────────────────────────────────────────
+const dz = document.getElementById('dropzone');
+const fi = document.getElementById('fileInput');
+dz.onclick = () => fi.click();
+dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('drag-over'); });
+dz.addEventListener('dragleave', () => dz.classList.remove('drag-over'));
+dz.addEventListener('drop', e => { e.preventDefault(); dz.classList.remove('drag-over'); if (e.dataTransfer.files[0]) loadFile(e.dataTransfer.files[0]); });
+fi.addEventListener('change', e => { if (e.target.files[0]) loadFile(e.target.files[0]); });
+
+function loadFile(f) {
+  filePath = window.electronAPI?.getPath?.(f) || f.path || f.name;
+  const el = document.getElementById('fileInfo');
+  el.style.display = 'block';
+  el.innerHTML = `<span class="fname">📄 ${f.name}</span><br><span class="fpath">${filePath}</span><br><span style="color:var(--muted);font-size:.63rem">${(f.size / 1024 / 1024).toFixed(2)} MB</span>`;
+  CHANNELS.forEach(c => { const e2 = document.getElementById('ch-' + c); if (e2) e2.classList.add('active'); });
+  setStatus('File loaded — ready', '');
+  oggArtFile = null;
+  tryAutoExtractArt(f);
+}
+
+function toggle(el) { el.classList.toggle('on'); }
+function isOn(id)   { return document.getElementById(id).classList.contains('on'); }
+function fv(id)     { return parseFloat(document.getElementById(id).value); }
+function coeff(id)  { return (fv(id) / 100).toFixed(4); }
+function dbToLin(db){ return Math.pow(10, parseFloat(db)/20); }
+
+// ── FOLD SAFETY PAD ──────────────────────────────────────────────────────
+// Previous versions of this function computed a theoretical worst-case
+// combined weight (every contributing channel at full scale, perfectly
+// in-phase, simultaneously) and padded for THAT. That's far more
+// conservative than any real downmix matrix actually uses — a hardware
+// AVR or a tool like Voicemeeter just applies the standard fold
+// coefficients directly plus a small fixed safety margin, and accepts
+// that a genuinely extreme, rare transient might need the limiter to
+// catch it. That's also what actually sounds right in practice: real
+// mixed content essentially never has every channel simultaneously at
+// full scale and in phase, so padding for that theoretical case just
+// makes everything quieter than it needs to be for no audible benefit.
+//
+// This now applies one modest fixed pad (-3dB) whenever the fold is
+// active, regardless of which optional layers (Detail/Haas/EQ) are on —
+// consistent, predictable, and matches standard downmix practice. The
+// Peak Limiter (fast attack, true-peak ceiling) is the actual safety net
+// for the rare moment that needs it, exactly like turning a gain knob
+// down and letting a limiter/clipper catch the odd peak.
+function computeHeadroomComp(fc, lfe, sl, bl, dr, xs, eqGains, useFold, useDetail, useHaas, useEQ) {
+  if (!useFold) return 1; // no fold, nothing to pad
+  return 0.7079; // -3dB fixed safety margin
+}
+
+function setStatus(txt, cls) {
+  const dot = document.getElementById('sdot');
+  const sp  = document.getElementById('stxt');
+  sp.textContent = txt; sp.className = cls || '';
+  dot.className  = 'sdot ' + (cls || 'idle');
+}
+
+// ── FILTER GRAPH ─────────────────────────────────────────────────────────────
+//
+// FULL PRESERVATION STRATEGY
+// ──────────────────────────
+// Problem with the old approach: Side channel (L−R)/2 causes CANCELLATION of
+// any instrument that has equal or similar energy in L and R (centre-panned
+// sources, mono layers, background pads, etc.). They simply vanish.
+//
+// New approach: ADDITIVE FOLD — never subtract, only add.
+//
+// LAYER 1 — MAIN FOLD (equal-power coefficients, ITU-R BS.775)
+//   OUT_L = FL×1.0 + FC×0.707 + LFE×lfe + SL×0.707 + BL×0.65
+//   OUT_R = FR×1.0 + FC×0.707 + LFE×lfe + SR×0.707 + BR×0.65
+//   This preserves EVERY channel. Nothing is ever subtracted.
+//
+// LAYER 2 — DETAIL RECOVERY PASS
+//   Extract the mid-panned "quiet" content that might get masked:
+//   Mid = (all channels summed at equal weight) → highpass 200Hz → soft blend
+//   This recovers background instruments, ambient layers, quiet pads.
+//
+// LAYER 3 — SURROUND WIDTH (Haas ITD)
+//   SL/SR get a 1.5ms inter-channel delay before folding → encodes spatial cue
+//   that survives in the stereo image (not side-channel, not destructive)
+//
+// LAYER 4 — extrastereo to widen the front image without phase issues
+//
+// LAYER 5 — Detail EQ (tuned for 7.1→stereo masking compensation)
+//
+// LAYER 6 — LUFS limiter (loudnorm two-pass: analysis + correction)
+//   This makes it louder without clipping or squashing transients.
+//   True Peak limiting prevents inter-sample overs.
+//
+function buildFilter() {
+  const inF = document.getElementById('inFmt').value;
+  const outF = document.getElementById('outFmt').value;
+  const chCount = {stereo:2, '51':6, '71':8};
+  const isUpmix = chCount[outF] > chCount[inF];
+  const isSame = inF === outF;
+  // Detail Recovery / Haas / stereo widener were built for folding DOWN TO
+  // STEREO specifically (they produce a 2-channel pan= output) — they don't
+  // make sense for a partial fold like 7.1->5.1 (output stays multichannel)
+  // or for upmixing. Only eligible for 71->stereo and 51->stereo.
+  const isDetailEligible = !isUpmix && !isSame && outF === 'stereo';
+
+  const fc   = coeff('fcSlider');
+  const lfe  = coeff('lfeSlider');
+  const sl   = coeff('slSlider');
+  const bl   = coeff('blSlider');
+  const dr   = coeff('drSlider');
+  const xs   = fv('xsSlider').toFixed(3);
+  const xo   = fv('xoSlider').toFixed(0);
+
+  const cx = dbToLin(fv('cxSlider')).toFixed(4);
+  const lx = dbToLin(fv('lxSlider')).toFixed(4);
+  const sx = dbToLin(fv('sxSlider')).toFixed(4);
+
+  const eq1  = fv('eq1Slider').toFixed(1);
+  const eq2  = fv('eq2Slider').toFixed(1);
+  const eq3  = fv('eq3Slider').toFixed(1);
+  const eq4  = fv('eq4Slider').toFixed(1);
+  const eq5  = fv('eq5Slider').toFixed(1);
+  const eq6  = fv('eq6Slider').toFixed(1);
+
+  const lufs = fv('lufsSlider').toFixed(1);
+  const tp   = fv('tpSlider').toFixed(1);
+  const lra  = fv('lraSlider').toFixed(0);
+  const pk    = fv('pkSlider').toFixed(1);
+  const pkAtk = fv('pkAtkSlider').toFixed(1);
+  const pkRel = fv('pkRelSlider').toFixed(1);
+
+  const useFold   = isOn('tog-fold');
+  const useDetail = isOn('tog-detail') && isDetailEligible;
+  const useHaas   = isOn('tog-haas') && isDetailEligible;
+  const useEQ     = isOn('tog-eq');
+  const useLUFS   = isOn('tog-lufs');
+  const usePeak   = isOn('tog-peak');
+  const useDC     = isOn('tog-dc');
+
+  let lines = [];
+  const outLabel = 'fold_raw'; // kept consistent so Detail/Haas splice points below still line up
+
+  // ═══════════════════════════════════════════════════════════════════════
+  // SAME LAYOUT — passthrough into the safety chain only
+  // ═══════════════════════════════════════════════════════════════════════
+  if (isSame) {
+    lines.push(`[0:a]acopy[${outLabel}]`);
+
+  // ═══════════════════════════════════════════════════════════════════════
+  // UPMIX — phase-derived center/LFE/surrounds, no Detail/Haas/EQ (n/a)
+  // ═══════════════════════════════════════════════════════════════════════
+  } else if (isUpmix && inF === 'stereo' && (outF === '51' || outF === '71')) {
+    lines.push(`[0:a]channelsplit=channel_layout=stereo[FL][FR]`);
+    lines.push(`[FL]asplit=3[FLp][FLc][FLs]`);
+    lines.push(`[FR]asplit=3[FRp][FRc][FRs]`);
+    lines.push(`[FLc]volume=0.5[FLc2]`);
+    lines.push(`[FRc]volume=0.5[FRc2]`);
+    lines.push(`[FLc2][FRc2]amix=inputs=2:weights=1 1:normalize=0[center_raw]`);
+    lines.push(`[center_raw]asplit=2[cr1][cr2]`);
+    lines.push(`[cr1]volume=${cx}[FC_out]`);
+    lines.push(`[cr2]lowpass=f=120[lferaw]`);
+    if (isOn('tog-lfe-derive')) {
+      lines.push(`[lferaw]volume=${lx}[LFE_out]`);
+    } else {
+      // Toggle off: send silence to LFE instead of a derived signal — all
+      // bass stays exactly where it already is, in FL/FR, untouched.
+      lines.push(`[lferaw]volume=0[LFE_out]`);
+    }
+    lines.push(`[FLs]volume=0.5[FLs2]`);
+    lines.push(`[FRs]volume=-0.5[FRs2]`);
+    lines.push(`[FLs2][FRs2]amix=inputs=2:weights=1 1:normalize=0[side_raw]`);
+    lines.push(`[side_raw]highpass=f=100[side_hp]`);
+    if (outF === '51') {
+      lines.push(`[side_hp]asplit=2[side_a][side_b]`);
+      lines.push(`[side_a]volume=${sx}[BL_out]`);
+      lines.push(`[side_b]volume=-${sx}[BR_out]`);
+      lines.push(`[FLp][FRp][FC_out][LFE_out][BL_out][BR_out]amerge=inputs=6,aformat=channel_layouts=5.1[${outLabel}]`);
+    } else {
+      lines.push(`[side_hp]asplit=4[side_a][side_b][side_c][side_d]`);
+      lines.push(`[side_a]volume=${sx}[BL_out]`);
+      lines.push(`[side_b]volume=-${sx}[BR_out]`);
+      lines.push(`[side_c]volume=${sx}[SL_out]`);
+      lines.push(`[side_d]volume=-${sx}[SR_out]`);
+      lines.push(`[FLp][FRp][FC_out][LFE_out][BL_out][BR_out][SL_out][SR_out]amerge=inputs=8,aformat=channel_layouts=7.1[${outLabel}]`);
+    }
+  } else if (isUpmix && inF === '51' && outF === '71') {
+    lines.push(`[0:a]channelsplit=channel_layout=5.1[FL][FR][FC][LFE][BL][BR]`);
+    lines.push(`[FL]asplit=2[FLp][FLs]`);
+    lines.push(`[FR]asplit=2[FRp][FRs]`);
+    lines.push(`[FLs]volume=0.5[FLs2]`);
+    lines.push(`[FRs]volume=-0.5[FRs2]`);
+    lines.push(`[FLs2][FRs2]amix=inputs=2:weights=1 1:normalize=0[side_raw]`);
+    lines.push(`[side_raw]highpass=f=100[side_hp]`);
+    lines.push(`[side_hp]asplit=2[side_a][side_b]`);
+    lines.push(`[side_a]volume=${sx}[SL_out]`);
+    lines.push(`[side_b]volume=-${sx}[SR_out]`);
+    lines.push(`[FLp][FRp][FC][LFE][BL][BR][SL_out][SR_out]amerge=inputs=8,aformat=channel_layouts=7.1[${outLabel}]`);
+
+  // ═══════════════════════════════════════════════════════════════════════
+  // DOWNMIX — bass-managed fold, with optional Detail/Haas for stereo output
+  // ═══════════════════════════════════════════════════════════════════════
+  } else {
+    const splitN = 1 + (useDetail ? 1 : 0) + (useHaas ? 1 : 0);
+    lines.push(`[0:a]asplit=${splitN}[main_a]${useDetail ? '[detail_a]' : ''}${useHaas ? '[haas_a]' : ''}`);
+
+    // ── LAYER 1: Main fold (bass-managed) ──
+    // SL/BL (and SR/BR) are spatially separate from the front by design —
+    // real surround/Atmos mixes can have genuine phase/timing differences
+    // between front and rear content. Summing their FULL-RANGE content
+    // (bass included) directly into the output alongside front bass creates
+    // phase-incoherent low end — masked by room acoustics on speakers,
+    // exposed as diffuse/uncomfortable bass on headphones (no crosstalk).
+    // LFE is the one channel actually designed to be non-directional and
+    // safe to sum directly, so SL/BL/SR/BR get highpassed before folding —
+    // only their mid/high content joins the mix, LFE alone carries bass.
+    if (useFold && inF === '71' && outF === 'stereo') {
+      lines.push(`[main_a]channelsplit=channel_layout=7.1[m_FL][m_FR][m_FC][m_LFE][m_BL][m_BR][m_SL][m_SR]`);
+      if (xo > 0) {
+        lines.push(`[m_SL]highpass=f=${xo}[m_SL_hp]`);
+        lines.push(`[m_SR]highpass=f=${xo}[m_SR_hp]`);
+        lines.push(`[m_BL]highpass=f=${xo}[m_BL_hp]`);
+        lines.push(`[m_BR]highpass=f=${xo}[m_BR_hp]`);
+      } else {
+        lines.push(`[m_SL]acopy[m_SL_hp]`);
+        lines.push(`[m_SR]acopy[m_SR_hp]`);
+        lines.push(`[m_BL]acopy[m_BL_hp]`);
+        lines.push(`[m_BR]acopy[m_BR_hp]`);
+      }
+      lines.push(`[m_FC]asplit=2[m_FC_a][m_FC_b]`);
+      lines.push(`[m_LFE]asplit=2[m_LFE_a][m_LFE_b]`);
+      lines.push(`[m_FL]volume=1.0[fold_fl]`);
+      lines.push(`[m_FC_a]volume=${fc}[fold_fc_l]`);
+      lines.push(`[m_LFE_a]volume=${lfe}[fold_lfe_l]`);
+      lines.push(`[m_SL_hp]volume=${sl}[fold_sl]`);
+      lines.push(`[m_BL_hp]volume=${bl}[fold_bl]`);
+      lines.push(`[fold_fl][fold_fc_l][fold_lfe_l][fold_sl][fold_bl]amix=inputs=5:weights=1 1 1 1 1:normalize=0[fold_L]`);
+      lines.push(`[m_FR]volume=1.0[fold_fr]`);
+      lines.push(`[m_FC_b]volume=${fc}[fold_fc_r]`);
+      lines.push(`[m_LFE_b]volume=${lfe}[fold_lfe_r]`);
+      lines.push(`[m_SR_hp]volume=${sl}[fold_sr]`);
+      lines.push(`[m_BR_hp]volume=${bl}[fold_br]`);
+      lines.push(`[fold_fr][fold_fc_r][fold_lfe_r][fold_sr][fold_br]amix=inputs=5:weights=1 1 1 1 1:normalize=0[fold_R]`);
+      lines.push(`[fold_L][fold_R]amerge=inputs=2,aformat=channel_layouts=stereo[${outLabel}]`);
+    } else if (useFold && inF === '71' && outF === '51') {
+      lines.push(`[main_a]channelsplit=channel_layout=7.1[FL][FR][FC][LFE][BL][BR][SL][SR]`);
+      if (xo > 0) {
+        lines.push(`[SL]highpass=f=${xo}[SLh]`);
+        lines.push(`[SR]highpass=f=${xo}[SRh]`);
+      } else {
+        lines.push(`[SL]acopy[SLh]`);
+        lines.push(`[SR]acopy[SRh]`);
+      }
+      lines.push(`[BL]volume=0.7[BLv]`);
+      lines.push(`[SLh]volume=0.7[SLv]`);
+      lines.push(`[BLv][SLv]amix=inputs=2:weights=1 1:normalize=0[BLo]`);
+      lines.push(`[BR]volume=0.7[BRv]`);
+      lines.push(`[SRh]volume=0.7[SRv]`);
+      lines.push(`[BRv][SRv]amix=inputs=2:weights=1 1:normalize=0[BRo]`);
+      lines.push(`[FL][FR][FC][LFE][BLo][BRo]amerge=inputs=6,aformat=channel_layouts=5.1[${outLabel}]`);
+    } else if (useFold && inF === '51' && outF === 'stereo') {
+      lines.push(`[main_a]channelsplit=channel_layout=5.1[FL][FR][FC][LFE][BL][BR]`);
+      if (xo > 0) {
+        lines.push(`[BL]highpass=f=${xo}[BLh]`);
+        lines.push(`[BR]highpass=f=${xo}[BRh]`);
+      } else {
+        lines.push(`[BL]acopy[BLh]`);
+        lines.push(`[BR]acopy[BRh]`);
+      }
+      lines.push(`[FC]asplit=2[FCa][FCb]`);
+      lines.push(`[LFE]asplit=2[LFEa][LFEb]`);
+      lines.push(`[FL]volume=1.0[l1]`);
+      lines.push(`[FCa]volume=${fc}[l2]`);
+      lines.push(`[LFEa]volume=${lfe}[l3]`);
+      lines.push(`[BLh]volume=${bl}[l4]`);
+      lines.push(`[l1][l2][l3][l4]amix=inputs=4:weights=1 1 1 1:normalize=0[Lo]`);
+      lines.push(`[FR]volume=1.0[r1]`);
+      lines.push(`[FCb]volume=${fc}[r2]`);
+      lines.push(`[LFEb]volume=${lfe}[r3]`);
+      lines.push(`[BRh]volume=${bl}[r4]`);
+      lines.push(`[r1][r2][r3][r4]amix=inputs=4:weights=1 1 1 1:normalize=0[Ro]`);
+      lines.push(`[Lo][Ro]amerge=inputs=2,aformat=channel_layouts=stereo[${outLabel}]`);
+    } else {
+      // Fold toggled off — plain passthrough of front channels only.
+      lines.push(`[main_a]pan=stereo|FL=FL|FR=FR[${outLabel}]`);
+    }
+
+    // ── LAYER 2: Background detail recovery (71->stereo / 51->stereo only) ──
+    // Takes ALL channels summed equally → extracts mid-panned quiet content
+    // that the weighted fold might slightly suppress. Additive — never cancels.
+    // 5.1 sources have no SL/SR, so that term is simply omitted for them.
+    if (useDetail) {
+      if (inF === '71') {
+        lines.push(
+          `[detail_a]pan=stereo|` +
+          `FL=0.25*FL+0.25*FC+0.15*LFE+0.20*SL+0.15*BL|` +
+          `FR=0.25*FR+0.25*FC+0.15*LFE+0.20*SR+0.15*BR[detail_raw]`
+        );
+      } else {
+        lines.push(
+          `[detail_a]pan=stereo|` +
+          `FL=0.25*FL+0.25*FC+0.15*LFE+0.20*BL|` +
+          `FR=0.25*FR+0.25*FC+0.15*LFE+0.20*BR[detail_raw]`
+        );
+      }
+      lines.push(`[detail_raw]highpass=f=200[detail_hp]`);
+      lines.push(`[detail_hp]volume=${dr}[detail_v]`);
+      lines.push(`[${outLabel}][detail_v]amix=inputs=2:weights=1 1:normalize=0[with_detail]`);
+    } else {
+      lines.push(`[${outLabel}]acopy[with_detail]`);
+    }
+
+    // ── LAYER 3: Haas ITD surround width (71->stereo / 51->stereo only) ──
+    // Comb-filter fix: highpass before the delay so only mid/high content
+    // takes the delayed path — summed delayed bass causes phase cancellation
+    // that reads as "distortion" independent of level. 5.1 has no SL/SR.
+    if (useHaas) {
+      if (inF === '71') {
+        lines.push(`[haas_a]pan=stereo|FL=0.45*SL+0.45*BL|FR=0.45*SR+0.45*BR[haas_surr]`);
+      } else {
+        lines.push(`[haas_a]pan=stereo|FL=0.45*BL|FR=0.45*BR[haas_surr]`);
+      }
+      lines.push(`[haas_surr]highpass=f=300[haas_hp]`);
+      lines.push(`[haas_hp]adelay=delays=1.2|1.2[haas_delay]`);
+      lines.push(`[haas_delay]volume=0.28[haas_v]`);
+      lines.push(`[with_detail][haas_v]amix=inputs=2:weights=1 1:normalize=0[with_haas]`);
+    } else {
+      lines.push(`[with_detail]acopy[with_haas]`);
+    }
+
+    // ── Fold safety pad (-3dB fixed margin, matches real downmix hardware
+    //    practice rather than a theoretical worst-case computation) ──
+    const foldComp = computeHeadroomComp(fc, lfe, sl, bl, dr, xs, [eq1,eq2,eq3,eq4,eq5,eq6], useFold, useDetail, useHaas, useEQ).toFixed(4);
+    if (foldComp !== '1.0000') {
+      lines.push(`[with_haas]volume=${foldComp}[fold_safe]`);
+    } else {
+      lines.push(`[with_haas]acopy[fold_safe]`);
+    }
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════
+  // SHARED SAFETY CHAIN — applies to every direction (channel-count agnostic
+  // except the widener, which is stereo-only and gets skipped otherwise)
+  // ═══════════════════════════════════════════════════════════════════════
+  const mixLabel = isSame || isUpmix ? outLabel : 'fold_safe';
+
+  if (useDC) {
+    lines.push(`[${mixLabel}]dcshift=shift=0[dc_clean]`);
+  } else {
+    lines.push(`[${mixLabel}]acopy[dc_clean]`);
+  }
+
+  if (outF === 'stereo') {
+    lines.push(`[dc_clean]extrastereo=m=${xs}[widened]`);
+  } else {
+    lines.push(`[dc_clean]acopy[widened]`); // extrastereo is stereo-only, skip for 5.1/7.1 output
+  }
+
+  if (useEQ) {
+    lines.push(`[widened]equalizer=f=40:width_type=o:width=1.2:g=${eq1}[e1]`);
+    lines.push(`[e1]equalizer=f=250:width_type=o:width=1.5:g=${eq2}[e2]`);
+    lines.push(`[e2]equalizer=f=2200:width_type=o:width=0.5:g=${eq6}[e3]`);
+    lines.push(`[e3]equalizer=f=3500:width_type=o:width=1.0:g=${eq3}[e4]`);
+    lines.push(`[e4]equalizer=f=8000:width_type=o:width=2.0:g=${eq4}[e5]`);
+    lines.push(`[e5]equalizer=f=14000:width_type=o:width=2.0:g=${eq5}[eq_out]`);
+  } else {
+    lines.push(`[widened]acopy[eq_out]`);
+  }
+
+  // linear=false (dynamic loudnorm) is deliberate — see earlier notes on why
+  // linear=true re-inflates exactly the passage headroom compensation tamed.
+  const pkLin = Math.pow(10, parseFloat(pk) / 20).toFixed(6);
+
+  if (usePeak && useLUFS) {
+    lines.push(`[eq_out]alimiter=level_in=1:level_out=1:limit=${pkLin}:attack=${pkAtk}:release=${pkRel}:level=false[pre_lim]`);
+    lines.push(`[pre_lim]loudnorm=I=${lufs}:TP=${tp}:LRA=${lra}:linear=false:print_format=none[lufs_out]`);
+    lines.push(`[lufs_out]alimiter=level_in=1:level_out=1:limit=${pkLin}:attack=${pkAtk}:release=${pkRel}:level=false[out]`);
+  } else if (usePeak && !useLUFS) {
+    lines.push(`[eq_out]alimiter=level_in=1:level_out=1:limit=${pkLin}:attack=${pkAtk}:release=${pkRel}:level=false[out]`);
+  } else if (!usePeak && useLUFS) {
+    lines.push(`[eq_out]loudnorm=I=${lufs}:TP=${tp}:LRA=${lra}:linear=false:print_format=none[out]`);
+  } else {
+    lines.push(`[eq_out]acopy[out]`);
+  }
+
+  return lines.join(';');
+}
+
+function getSR()  { return document.getElementById('sampleRate').value; }
+
+// Per-format codec args, using selectedFormat (from the format button grid)
+// instead of a dropdown. Bitrate scales with output channel count so
+// multichannel lossy exports get proportionally more bitrate than stereo.
+function getCodecArgs() {
+  const outF = document.getElementById('outFmt').value;
+  const chCount = {stereo:2, '51':6, '71':8}[outF];
+  const sr = getSR();
+
+  if (selectedFormat === 'flac')   return ['-c:a','flac','-sample_fmt','s32','-ar',sr];
+  if (selectedFormat === 'wav')    return ['-c:a','pcm_s24le','-ar',sr];
+  if (selectedFormat === 'alac')   return ['-c:a','alac','-sample_fmt','s32p','-ar',sr];
+  if (selectedFormat === 'opus') {
+    const br = Math.round(fv('brSlider') * (chCount/2));
+    return ['-c:a','libopus','-b:a',`${br}k`,'-vbr','on','-compression_level','10','-application','audio','-ar',sr];
+  }
+  if (selectedFormat === 'vorbis') {
+    const br = Math.round(fv('brSlider') * (chCount/2));
+    return ['-c:a','libvorbis','-b:a',`${br}k`,'-ar',sr];
+  }
+  if (selectedFormat === 'mp3')    return ['-c:a','libmp3lame','-q:a','0','-id3v2_version','3','-ar',sr];
+  if (selectedFormat === 'aac') {
+    const br = Math.round(fv('brSlider') * (chCount/2));
+    if (chCount === 2) return ['-c:a','aac','-q:a','2','-ar',sr];
+    return ['-c:a','aac','-b:a',`${br}k`,'-ar',sr];
+  }
+  return ['-c:a','flac','-sample_fmt','s32','-ar',sr];
+}
+
+function buildOutPath() {
+  const dir  = document.getElementById('outDir').value.trim();
+  const ext  = getOutputExtension();
+  const tag  = ' - ' + outFmtLabel() + '-' + selectedFormat.toUpperCase();
+  const base = filePath.replace(/\.[^.]+$/, '') + tag + '.' + ext;
+  if (!dir) return base;
+  const sep   = filePath.includes('/') ? '/' : '\\';
+  const fname = filePath.split(sep).pop().replace(/\.[^.]+$/, '') + tag + '.' + ext;
+  return dir.replace(/[/\\]$/, '') + sep + fname;
+}
+
+async function run() {
+  if (!filePath) { setStatus('⚠ No file loaded', 'error'); return; }
+  const ffmpeg = document.getElementById('ffmpegPath').value.trim();
+  if (!ffmpeg)  { setStatus('⚠ FFmpeg path missing', 'error'); return; }
+
+  const outPath = buildOutPath();
+  const filter  = buildFilter();
+
+  // ── Metadata / cover art args, per format capability (tested, not assumed) ──
+  let metaArgs = ['-map_metadata', '0'];
+  const artCapableDirect = ['flac','alac','mp3'].includes(selectedFormat) ||
+    (selectedFormat === 'aac' && !(document.getElementById('aacRawToggle') && isOn('aacRawToggle')));
+  if (artCapableDirect) {
+    metaArgs = ['-map','0:v?','-c:v','copy','-disposition:v','attached_pic', ...metaArgs];
+  }
+  // WAV: tags only, no art stream (WAV can't hold one — hard failure if attempted).
+  // AAC raw ADTS: no metadata support at all, container-level limitation.
+
+  let extraArgs = [];
+  if ((selectedFormat === 'opus' || selectedFormat === 'vorbis') && (autoExtractedPictureBlock || oggArtFile)) {
+    setStatus('Encoding cover art…', 'running');
+    try {
+      let b64;
+      if (autoExtractedPictureBlock) {
+        b64 = autoExtractedPictureBlock;
+      } else {
+        const buf = await oggArtFile.arrayBuffer();
+        const bytes = new Uint8Array(buf);
+        const dims = await getImageDimensions(oggArtFile.type, bytes);
+        const blockBytes = buildPictureBlockBytes(oggArtFile.type || 'image/jpeg', dims.w, dims.h, bytes);
+        b64 = bytesToBase64(blockBytes);
+      }
+      extraArgs = ['-metadata:s:a:0', `METADATA_BLOCK_PICTURE=${b64}`];
+    } catch(e) {
+      setStatus('Cover art failed to encode — continuing without art: ' + e.message, 'error');
+    }
+  }
+
+  const args = [
+    '-i', filePath,
+    '-filter_complex', filter,
+    '-map', '[out]',
+    ...metaArgs,
+    ...extraArgs,
+    ...getCodecArgs(),
+    outPath
+  ];
+
+  const compMatch = filter.match(/volume=([\d.]+)\[fold_safe\]/);
+  const compDb = compMatch ? (20 * Math.log10(parseFloat(compMatch[1]))).toFixed(2) : '0.00';
+
+  const log = document.getElementById('output');
+  log.style.display = 'block';
+  log.textContent = '# Direction: ' + dirKey() + '  ·  Format: ' + selectedFormat.toUpperCase()
+    + '\n# Fold headroom compensation: ' + compDb + ' dB'
+    + (compMatch ? '' : ' (n/a for this direction/settings)')
+    + '\n\n# FFmpeg command\n' + ffmpeg + ' ' + args.map(a => a.includes(' ') ? `"${a}"` : a).join(' ') + '\n\n# Processing…';
+
+  setStatus('Processing — please wait…', 'running');
+  document.getElementById('progWrap').style.display = 'block';
+  document.getElementById('runBtn').disabled = true;
+
+  if (window.electronAPI?.runFFmpeg) {
+    const res = await window.electronAPI.runFFmpeg({ ffmpeg, args });
+    document.getElementById('progWrap').style.display = 'none';
+    document.getElementById('runBtn').disabled = false;
+    if (res.code !== 0) {
+      setStatus('❌ Failed — check log', 'error');
+      log.textContent += '\n\n# STDERR:\n' + res.stderr;
+    } else {
+      setStatus('✅ Conversion complete', 'done');
+      log.textContent += '\n\n# Output:\n' + outPath;
+    }
+  } else {
+    document.getElementById('progWrap').style.display = 'none';
+    document.getElementById('runBtn').disabled = false;
+    setStatus('ℹ Preview mode — copy command to terminal', '');
+    log.textContent += '\n\n# No Electron IPC detected. Run the command above manually.\n# Expected output: ' + outPath;
+  }
+}
+
+document.getElementById('bstamp').textContent = 'BUILD ' + new Date().toISOString().slice(0,10).replace(/-/g, '');
+onDirectionChange();
+selectFormat('flac');
+</script>
+</body>
+</html>
