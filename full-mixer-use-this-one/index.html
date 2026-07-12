@@ -566,6 +566,23 @@
     </div>
   </div>
 
+  <div class="card" id="opusModeCard" style="display:none; margin-top:10px">
+    <label style="text-transform:none;letter-spacing:0;">Opus Encoding Mode</label>
+    <div class="tgrid" style="grid-template-columns:1fr">
+      <div class="ti on" id="tog-opus-celt" onclick="toggle(this)"><div class="sw"></div><div class="ti-txt">CELT-only (via lowdelay — disables adaptive SILK/Hybrid mode-switching)</div></div>
+    </div>
+    <div class="path-hint" style="margin-top:8px">
+      ffmpeg's libopus wrapper has no literal "force CELT" flag — this uses <code>-application lowdelay</code>,
+      which explicitly disables the voice-optimized (SILK/Hybrid) modes, the closest available equivalent.
+      Opus normally switches adaptively between SILK/CELT/Hybrid per-frame based on content, and that
+      switching can occasionally produce subtle, content-dependent artifacts on some material. Forcing
+      CELT-only removes the switching entirely, at a small honest cost: Hybrid mode's dialogue-specific
+      efficiency (using SILK for the speech band) is unavailable, so dialogue-heavy passages may compress
+      very slightly less efficiently. At 320kbps+ this tradeoff is negligible. Untoggle to restore full
+      adaptive mode if you're not seeing the artifact this was meant to fix.
+    </div>
+  </div>
+
   <div class="card" id="oggArtCard" style="display:none; margin-top:10px">
     <label style="text-transform:none;letter-spacing:0;">Cover Art for Opus/Vorbis (optional — auto-detected for FLAC/MP3/MKA/M4A/Ogg sources)</label>
     <div class="path-hint" style="margin-bottom:8px">
@@ -1112,6 +1129,7 @@ function selectFormat(fmt){
   const lossy = (fmt === 'opus' || fmt === 'aac' || fmt === 'vorbis' || fmt === 'mp3');
   document.getElementById('bitrateRow').style.display = lossy ? 'grid' : 'none';
   document.getElementById('aacContainerCard').style.display = (fmt === 'aac') ? 'block' : 'none';
+  document.getElementById('opusModeCard').style.display = (fmt === 'opus') ? 'block' : 'none';
   document.getElementById('oggArtCard').style.display = (fmt === 'opus' || fmt === 'vorbis') ? 'block' : 'none';
   updateAacContainerLabel();
   updateMetaSummary(fmt);
@@ -1582,33 +1600,19 @@ function buildFilter() {
     lines.push(`[widened]acopy[eq_out]`);
   }
 
-  // linear=false (dynamic loudnorm) is deliberate — see earlier notes on why
-  // linear=true re-inflates exactly the passage headroom compensation tamed.
-  const pkLin = Math.pow(10, parseFloat(pk) / 20).toFixed(6);
-
-  if (usePeak && useLUFS) {
-    lines.push(`[eq_out]alimiter=level_in=1:level_out=1:limit=${pkLin}:attack=${pkAtk}:release=${pkRel}:level=false[pre_lim]`);
-    lines.push(`[pre_lim]loudnorm=I=${lufs}:TP=${tp}:LRA=${lra}:linear=false:print_format=none[lufs_out]`);
-    lines.push(`[lufs_out]alimiter=level_in=1:level_out=1:limit=${pkLin}:attack=${pkAtk}:release=${pkRel}:level=false[pre_fps]`);
-  } else if (usePeak && !useLUFS) {
-    lines.push(`[eq_out]alimiter=level_in=1:level_out=1:limit=${pkLin}:attack=${pkAtk}:release=${pkRel}:level=false[pre_fps]`);
-  } else if (!usePeak && useLUFS) {
-    lines.push(`[eq_out]loudnorm=I=${lufs}:TP=${tp}:LRA=${lra}:linear=false:print_format=none[pre_fps]`);
-  } else {
-    lines.push(`[eq_out]acopy[pre_fps]`);
-  }
-
   // ── Framerate sync correction — OFF by default, opt-in only ──
-  // Only relevant if the video itself was actually retimed between two
-  // frame rates (e.g. 23.976->24fps to fix player stutter) without the
-  // audio being resampled to match.
-  //
-  // ── Framerate sync correction — OFF by default, opt-in only ──
-  // Only relevant if the video itself was actually retimed between two
-  // frame rates (e.g. 23.976->24fps to fix player stutter) without the
-  // audio being resampled to match.
-  //
-  // Two methods, both validated by exact sample-count comparison:
+  // Placed BEFORE the Peak Limiter/LUFS chain, not after. Both correction
+  // methods (resample and time-stretch) can produce intersample overshoot
+  // on sharp transients — resampling reconstructs a continuous waveform
+  // between samples, and that reconstruction can peak higher than the
+  // original discrete samples ever did, especially right at a transient
+  // attack. If this ran after the limiter, that overshoot would bypass the
+  // limiter's ceiling entirely — confirmed via testing: a "lossless control"
+  // render (limiter active) still showed samples clipping past 0dBFS
+  // exactly at transient locations when fps-sync ran after the limiter.
+  // Running it first means the limiter is the genuine last stage and
+  // catches whatever overshoot the correction introduces, same principle
+  // as why loudnorm's own reinflation needed a limiter after it earlier.
   //
   // RESAMPLE (default): asetrate+aresample, the traditional broadcast
   // "pull-up/pull-down" technique for exactly this correction. Pure linear
@@ -1621,10 +1625,7 @@ function buildFilter() {
   // was found to cause exactly the "duplicated/smeared" symptom on
   // dialogue-heavy content during testing). Works by reconstructing the
   // waveform through analysis/resynthesis, which can still smear transients
-  // on complex material — that's inherent to how time-stretching works,
-  // confirmed as the cause of residual "smearing" even with channels=together
-  // and a clean codec (Opus). Kept available for cases where zero pitch
-  // shift genuinely matters more than the small smearing risk.
+  // on complex material — that's inherent to how time-stretching works.
   if (isOn('tog-fps-sync')){
     const srcFps = FPS_PRESETS[fv('srcFpsSlider')];
     const tgtFps = FPS_PRESETS[fv('tgtFpsSlider')];
@@ -1632,15 +1633,31 @@ function buildFilter() {
       const ratio = tgtFps / srcFps;
       if (isOn('tog-fps-resample')){
         const newRate = Math.round(parseInt(getSR()) * ratio);
-        lines.push(`[pre_fps]asetrate=${newRate},aresample=${getSR()}[out]`);
+        lines.push(`[eq_out]asetrate=${newRate},aresample=${getSR()}[post_fps]`);
       } else {
-        lines.push(`[pre_fps]rubberband=tempo=${ratio.toFixed(6)}:channels=together[out]`);
+        lines.push(`[eq_out]rubberband=tempo=${ratio.toFixed(6)}:channels=together[post_fps]`);
       }
     } else {
-      lines.push(`[pre_fps]anull[out]`);
+      lines.push(`[eq_out]acopy[post_fps]`);
     }
   } else {
-    lines.push(`[pre_fps]anull[out]`);
+    lines.push(`[eq_out]acopy[post_fps]`);
+  }
+
+  // linear=false (dynamic loudnorm) is deliberate — see earlier notes on why
+  // linear=true re-inflates exactly the passage headroom compensation tamed.
+  const pkLin = Math.pow(10, parseFloat(pk) / 20).toFixed(6);
+
+  if (usePeak && useLUFS) {
+    lines.push(`[post_fps]alimiter=level_in=1:level_out=1:limit=${pkLin}:attack=${pkAtk}:release=${pkRel}:level=false[pre_lim]`);
+    lines.push(`[pre_lim]loudnorm=I=${lufs}:TP=${tp}:LRA=${lra}:linear=false:print_format=none[lufs_out]`);
+    lines.push(`[lufs_out]alimiter=level_in=1:level_out=1:limit=${pkLin}:attack=${pkAtk}:release=${pkRel}:level=false[out]`);
+  } else if (usePeak && !useLUFS) {
+    lines.push(`[post_fps]alimiter=level_in=1:level_out=1:limit=${pkLin}:attack=${pkAtk}:release=${pkRel}:level=false[out]`);
+  } else if (!usePeak && useLUFS) {
+    lines.push(`[post_fps]loudnorm=I=${lufs}:TP=${tp}:LRA=${lra}:linear=false:print_format=none[out]`);
+  } else {
+    lines.push(`[post_fps]acopy[out]`);
   }
 
   return lines.join(';');
@@ -1661,7 +1678,9 @@ function getCodecArgs() {
   if (selectedFormat === 'alac')   return ['-c:a','alac','-sample_fmt','s32p','-ar',sr];
   if (selectedFormat === 'opus') {
     const br = Math.round(fv('brSlider') * (chCount/2));
-    return ['-c:a','libopus','-b:a',`${br}k`,'-vbr','on','-compression_level','10','-application','audio','-ar',sr];
+    const celtOnly = document.getElementById('tog-opus-celt') && isOn('tog-opus-celt');
+    const app = celtOnly ? 'lowdelay' : 'audio';
+    return ['-c:a','libopus','-b:a',`${br}k`,'-vbr','on','-compression_level','10','-application',app,'-ar',sr];
   }
   if (selectedFormat === 'vorbis') {
     const br = Math.round(fv('brSlider') * (chCount/2));
