@@ -605,6 +605,11 @@
         <div class="rrow"><span>23.976</span><span>60</span></div>
       </div>
     </div>
+    <div class="tgrid" style="grid-template-columns:1fr; margin-top:10px">
+      <div class="ti on" id="tog-fps-resample" onclick="toggle(this); updateFpsSyncInfo();">
+        <div class="sw"></div><div class="ti-txt">Resample method (default, recommended) — untoggle for time-stretch (rubberband) instead</div>
+      </div>
+    </div>
     <div class="info-box" id="fpsSyncInfo"></div>
   </div>
 
@@ -1216,16 +1221,27 @@ function updateFpsSyncInfo(){
   const ratio = tgtFps / srcFps;
   const info = document.getElementById('fpsSyncInfo');
   if (srcFps === tgtFps){
-    info.innerHTML = '<strong style="color:var(--muted)">Source and target match — no correction needed, atempo will not be applied even if this toggle is on.</strong>';
+    info.innerHTML = '<strong style="color:var(--muted)">Source and target match — no correction needed, nothing will be applied even if this toggle is on.</strong>';
     return;
   }
+  const useResample = isOn('tog-fps-resample');
   const driftPerHourMs = Math.abs((1 - 1/ratio) * 3600 * 1000);
-  info.innerHTML = `Audio will be time-stretched by <strong style="color:var(--accent)">${ratio.toFixed(6)}×</strong> `
-    + `using <strong>rubberband</strong> (pitch-preserving — a duration correction, not a speed-up you'd hear as pitch shift). `
+  const cents = 1200 * Math.log2(ratio);
+  let methodExplain;
+  if (useResample){
+    methodExplain = `<strong>Resample method</strong> (asetrate+aresample — the traditional broadcast "pull-up/pull-down" technique for exactly this correction): `
+      + `linear operation, no analysis/resynthesis, so it can't smear transients the way time-stretching can. `
+      + `Introduces a real but tiny pitch shift of <strong style="color:var(--accent)">${cents.toFixed(2)} cents</strong> `
+      + `(typical human pitch discrimination is ~5-6 cents — this is meaningfully below audible).`;
+  } else {
+    methodExplain = `<strong>Time-stretch method</strong> (rubberband, channels locked together): zero pitch shift, but works by `
+      + `reconstructing the waveform through analysis/resynthesis, which can introduce subtle smearing on transient-heavy `
+      + `content (dialogue consonants, percussive hits) — this is inherent to how time-stretching works, not a settings bug.`;
+  }
+  info.innerHTML = `Audio duration will be corrected by <strong style="color:var(--accent)">${ratio.toFixed(6)}×</strong>. ${methodExplain} `
     + `Uncorrected drift at this rate mismatch would reach roughly <strong style="color:var(--yellow)">${driftPerHourMs.toFixed(0)}ms per hour</strong> of runtime. `
-    + `Only enable this if you know the video itself was actually retimed between these two rates — `
-    + `if the video was just relabeled without changing its frame data, this will make things worse, not better. `
-    + `<strong style="color:var(--muted)">Requires ffmpeg built with --enable-librubberband</strong> (present in most full builds incl. gyan.dev's; if your build lacks it, the command will fail with an "Unknown filter" error and you'll need a different build).`;
+    + `Only enable this at all if you know the video itself was actually retimed between these two rates — `
+    + `if the video was just relabeled without changing its frame data, this will make things worse, not better.`;
 }
 
 // ── FOLD SAFETY PAD ──────────────────────────────────────────────────────
@@ -1587,26 +1603,39 @@ function buildFilter() {
   // frame rates (e.g. 23.976->24fps to fix player stutter) without the
   // audio being resampled to match.
   //
-  // Uses rubberband, not atempo. Tested both directly: atempo silently
-  // fails to apply changes this small (ratios around 1.001) — confirmed via
-  // exact sample-count comparison, atempo=1.001001 produced ZERO change in
-  // output length, apparently below its internal processing granularity.
-  // rubberband (professional-grade time-stretch library) matched the exact
-  // theoretical sample count to the sample at the same ratio. atempo is
-  // built for dramatic tempo changes (0.5x-2x); this correction needs
-  // sub-0.1% precision, which is a different job.
+  // ── Framerate sync correction — OFF by default, opt-in only ──
+  // Only relevant if the video itself was actually retimed between two
+  // frame rates (e.g. 23.976->24fps to fix player stutter) without the
+  // audio being resampled to match.
   //
-  // channels=together (not the library default of "apart") locks
-  // multichannel transient detection/processing together instead of
-  // analyzing each channel independently — rubberband's own documented
-  // fix for stereo/multichannel image smearing, which otherwise reads as
-  // content (especially dialogue/transients) sounding doubled or displaced.
+  // Two methods, both validated by exact sample-count comparison:
+  //
+  // RESAMPLE (default): asetrate+aresample, the traditional broadcast
+  // "pull-up/pull-down" technique for exactly this correction. Pure linear
+  // operation — no analysis/resynthesis — so it structurally cannot smear
+  // transients. Introduces a real but tiny pitch shift (~1.7 cents for a
+  // 23.976<->24 correction, well under the ~5-6 cent audibility threshold).
+  //
+  // TIME-STRETCH (rubberband, opt-out): zero pitch shift, channels locked
+  // together (channels=together, not the library default "apart", which
+  // was found to cause exactly the "duplicated/smeared" symptom on
+  // dialogue-heavy content during testing). Works by reconstructing the
+  // waveform through analysis/resynthesis, which can still smear transients
+  // on complex material — that's inherent to how time-stretching works,
+  // confirmed as the cause of residual "smearing" even with channels=together
+  // and a clean codec (Opus). Kept available for cases where zero pitch
+  // shift genuinely matters more than the small smearing risk.
   if (isOn('tog-fps-sync')){
     const srcFps = FPS_PRESETS[fv('srcFpsSlider')];
     const tgtFps = FPS_PRESETS[fv('tgtFpsSlider')];
     if (srcFps !== tgtFps){
-      const ratio = (tgtFps / srcFps).toFixed(6);
-      lines.push(`[pre_fps]rubberband=tempo=${ratio}:channels=together[out]`);
+      const ratio = tgtFps / srcFps;
+      if (isOn('tog-fps-resample')){
+        const newRate = Math.round(parseInt(getSR()) * ratio);
+        lines.push(`[pre_fps]asetrate=${newRate},aresample=${getSR()}[out]`);
+      } else {
+        lines.push(`[pre_fps]rubberband=tempo=${ratio.toFixed(6)}:channels=together[out]`);
+      }
     } else {
       lines.push(`[pre_fps]anull[out]`);
     }
