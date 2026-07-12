@@ -1595,12 +1595,18 @@ function buildFilter() {
   // theoretical sample count to the sample at the same ratio. atempo is
   // built for dramatic tempo changes (0.5x-2x); this correction needs
   // sub-0.1% precision, which is a different job.
+  //
+  // channels=together (not the library default of "apart") locks
+  // multichannel transient detection/processing together instead of
+  // analyzing each channel independently — rubberband's own documented
+  // fix for stereo/multichannel image smearing, which otherwise reads as
+  // content (especially dialogue/transients) sounding doubled or displaced.
   if (isOn('tog-fps-sync')){
     const srcFps = FPS_PRESETS[fv('srcFpsSlider')];
     const tgtFps = FPS_PRESETS[fv('tgtFpsSlider')];
     if (srcFps !== tgtFps){
       const ratio = (tgtFps / srcFps).toFixed(6);
-      lines.push(`[pre_fps]rubberband=tempo=${ratio}[out]`);
+      lines.push(`[pre_fps]rubberband=tempo=${ratio}:channels=together[out]`);
     } else {
       lines.push(`[pre_fps]anull[out]`);
     }
