@@ -40,7 +40,7 @@ Then run `npm start`
 
 <br>
 
-For `full-mixer-use-this-one` their no need for the info below.
+For `full-mixer-use-this-one` theirs no need for the info below.
 
 ---
 
