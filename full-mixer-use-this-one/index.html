@@ -586,6 +586,28 @@
       placeholder="Path to ffmpeg.exe">
   </div>
 
+  <div class="slbl">Framerate Sync Correction</div>
+  <div class="tgrid" style="grid-template-columns:1fr">
+    <div class="ti" id="tog-fps-sync" onclick="toggle(this); updateFpsSyncInfo();">
+      <div class="sw"></div><div class="ti-txt">Correct audio for a video framerate conversion (e.g. 23.976→24fps) — OFF by default, only touches audio if explicitly enabled</div>
+    </div>
+  </div>
+  <div id="fpsSyncSection" style="display:none; margin-top:10px">
+    <div class="opts">
+      <div class="card">
+        <label>Source Frame Rate (original) <span class="va" id="srcFpsVal">23.976 fps</span></label>
+        <input type="range" id="srcFpsSlider" min="0" max="8" step="1" value="0" oninput="updateFpsSyncInfo()">
+        <div class="rrow"><span>23.976</span><span>60</span></div>
+      </div>
+      <div class="card">
+        <label>Target Frame Rate (converted to) <span class="va" id="tgtFpsVal">24 fps</span></label>
+        <input type="range" id="tgtFpsSlider" min="0" max="8" step="1" value="1" oninput="updateFpsSyncInfo()">
+        <div class="rrow"><span>23.976</span><span>60</span></div>
+      </div>
+    </div>
+    <div class="info-box" id="fpsSyncInfo"></div>
+  </div>
+
   <div class="slbl">Output Directory (optional)</div>
   <input class="path-inp" type="text" id="outDir" placeholder="Leave blank — saves alongside source">
   <div class="path-hint" id="outDirHint">Output tagged: filename + " - Stereo-Full.flac"</div>
@@ -1178,6 +1200,34 @@ function fv(id)     { return parseFloat(document.getElementById(id).value); }
 function coeff(id)  { return (fv(id) / 100).toFixed(4); }
 function dbToLin(db){ return Math.pow(10, parseFloat(db)/20); }
 
+// Real broadcast/film standard rates, not arbitrary decimals — precision
+// matters here since even small errors compound audibly over a long runtime.
+const FPS_PRESETS = [23.976, 24, 25, 29.97, 30, 48, 50, 59.94, 60];
+
+function updateFpsSyncInfo(){
+  const srcIdx = fv('srcFpsSlider');
+  const tgtIdx = fv('tgtFpsSlider');
+  const srcFps = FPS_PRESETS[srcIdx];
+  const tgtFps = FPS_PRESETS[tgtIdx];
+  document.getElementById('srcFpsVal').textContent = srcFps + ' fps';
+  document.getElementById('tgtFpsVal').textContent = tgtFps + ' fps';
+  document.getElementById('fpsSyncSection').style.display = isOn('tog-fps-sync') ? 'block' : 'none';
+
+  const ratio = tgtFps / srcFps;
+  const info = document.getElementById('fpsSyncInfo');
+  if (srcFps === tgtFps){
+    info.innerHTML = '<strong style="color:var(--muted)">Source and target match — no correction needed, atempo will not be applied even if this toggle is on.</strong>';
+    return;
+  }
+  const driftPerHourMs = Math.abs((1 - 1/ratio) * 3600 * 1000);
+  info.innerHTML = `Audio will be time-stretched by <strong style="color:var(--accent)">${ratio.toFixed(6)}×</strong> `
+    + `using <strong>rubberband</strong> (pitch-preserving — a duration correction, not a speed-up you'd hear as pitch shift). `
+    + `Uncorrected drift at this rate mismatch would reach roughly <strong style="color:var(--yellow)">${driftPerHourMs.toFixed(0)}ms per hour</strong> of runtime. `
+    + `Only enable this if you know the video itself was actually retimed between these two rates — `
+    + `if the video was just relabeled without changing its frame data, this will make things worse, not better. `
+    + `<strong style="color:var(--muted)">Requires ffmpeg built with --enable-librubberband</strong> (present in most full builds incl. gyan.dev's; if your build lacks it, the command will fail with an "Unknown filter" error and you'll need a different build).`;
+}
+
 // ── FOLD SAFETY PAD ──────────────────────────────────────────────────────
 // Previous versions of this function computed a theoretical worst-case
 // combined weight (every contributing channel at full scale, perfectly
@@ -1523,13 +1573,39 @@ function buildFilter() {
   if (usePeak && useLUFS) {
     lines.push(`[eq_out]alimiter=level_in=1:level_out=1:limit=${pkLin}:attack=${pkAtk}:release=${pkRel}:level=false[pre_lim]`);
     lines.push(`[pre_lim]loudnorm=I=${lufs}:TP=${tp}:LRA=${lra}:linear=false:print_format=none[lufs_out]`);
-    lines.push(`[lufs_out]alimiter=level_in=1:level_out=1:limit=${pkLin}:attack=${pkAtk}:release=${pkRel}:level=false[out]`);
+    lines.push(`[lufs_out]alimiter=level_in=1:level_out=1:limit=${pkLin}:attack=${pkAtk}:release=${pkRel}:level=false[pre_fps]`);
   } else if (usePeak && !useLUFS) {
-    lines.push(`[eq_out]alimiter=level_in=1:level_out=1:limit=${pkLin}:attack=${pkAtk}:release=${pkRel}:level=false[out]`);
+    lines.push(`[eq_out]alimiter=level_in=1:level_out=1:limit=${pkLin}:attack=${pkAtk}:release=${pkRel}:level=false[pre_fps]`);
   } else if (!usePeak && useLUFS) {
-    lines.push(`[eq_out]loudnorm=I=${lufs}:TP=${tp}:LRA=${lra}:linear=false:print_format=none[out]`);
+    lines.push(`[eq_out]loudnorm=I=${lufs}:TP=${tp}:LRA=${lra}:linear=false:print_format=none[pre_fps]`);
   } else {
-    lines.push(`[eq_out]acopy[out]`);
+    lines.push(`[eq_out]acopy[pre_fps]`);
+  }
+
+  // ── Framerate sync correction — OFF by default, opt-in only ──
+  // Only relevant if the video itself was actually retimed between two
+  // frame rates (e.g. 23.976->24fps to fix player stutter) without the
+  // audio being resampled to match.
+  //
+  // Uses rubberband, not atempo. Tested both directly: atempo silently
+  // fails to apply changes this small (ratios around 1.001) — confirmed via
+  // exact sample-count comparison, atempo=1.001001 produced ZERO change in
+  // output length, apparently below its internal processing granularity.
+  // rubberband (professional-grade time-stretch library) matched the exact
+  // theoretical sample count to the sample at the same ratio. atempo is
+  // built for dramatic tempo changes (0.5x-2x); this correction needs
+  // sub-0.1% precision, which is a different job.
+  if (isOn('tog-fps-sync')){
+    const srcFps = FPS_PRESETS[fv('srcFpsSlider')];
+    const tgtFps = FPS_PRESETS[fv('tgtFpsSlider')];
+    if (srcFps !== tgtFps){
+      const ratio = (tgtFps / srcFps).toFixed(6);
+      lines.push(`[pre_fps]rubberband=tempo=${ratio}[out]`);
+    } else {
+      lines.push(`[pre_fps]anull[out]`);
+    }
+  } else {
+    lines.push(`[pre_fps]anull[out]`);
   }
 
   return lines.join(';');
@@ -1660,6 +1736,7 @@ async function run() {
 document.getElementById('bstamp').textContent = 'BUILD ' + new Date().toISOString().slice(0,10).replace(/-/g, '');
 onDirectionChange();
 selectFormat('flac');
+updateFpsSyncInfo();
 </script>
 </body>
 </html>
