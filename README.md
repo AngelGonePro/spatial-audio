@@ -17,6 +17,7 @@ And extract it in a location, in my case `C:\Users\Angel\Documents\ffmpeg-8.0.1-
 <br>
 
 After installing Node.js go to the directory you downloaded, in my case `C:\Users\Angel\Downloads\spatial-upmixer`
+PLEASE MAKE SURE TO USE THE INCLUDED `main.js` IN THIS REPO IN THE SAME DIRECTORY ASWELL.
 
 <br>
 
