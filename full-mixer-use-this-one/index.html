@@ -461,6 +461,41 @@
   </div>
 
   <!-- PEAK LIMITER -->
+  <div class="slbl">Smooth Compressor (Pre-Limiter Stage)</div>
+  <div class="lufs-card" style="border-color:rgba(124,92,255,.32);">
+    <div class="lufs-header">
+      <span class="icon">〰️</span>
+      <span class="title" style="color:var(--purple);">RMS Soft-Knee Compressor</span>
+      <span class="sub">Does the day-to-day gain work smoothly, before the hard limiter ever needs to</span>
+    </div>
+    <div style="font-size:.65rem;color:#5a4d80;line-height:1.8;margin-bottom:10px;">
+      This is the "different kind of limiter" — genuinely different detection, not just gentler settings
+      on the same mechanism. The Peak Limiter below reacts to instantaneous sample peaks (a hard,
+      abrupt brickwall by design — that abruptness is exactly what caused the audible crackling on loud
+      dialogue). This stage uses <strong style="color:var(--purple)">RMS detection</strong> (average
+      energy over time, not instant peaks) with a <strong style="color:var(--purple)">soft knee</strong>
+      (gain reduction ramps in gradually approaching the threshold, rather than doing nothing until it
+      then clamping hard) — standard two-stage mastering practice. With this on, the hard limiter below
+      should rarely need to do more than catch the rare genuine outlier, instead of doing all the work
+      itself on every loud passage.
+    </div>
+    <div class="tgrid" style="grid-template-columns:1fr">
+      <div class="ti on" id="tog-compressor" onclick="toggle(this)"><div class="sw"></div><div class="ti-txt">Enabled</div></div>
+    </div>
+    <div class="lufs-grid" style="margin-top:10px">
+      <div class="lufs-field">
+        <label>Threshold  <span style="color:var(--purple)" id="compThreshVal">−9.0 dB</span></label>
+        <input type="range" id="compThreshSlider" min="-20" max="-3" step="0.5" value="-9.0">
+        <div class="rrow"><span>−20 dB</span><span>−3 dB</span></div>
+      </div>
+      <div class="lufs-field">
+        <label>Ratio  <span style="color:var(--purple)" id="compRatioVal">3.0:1</span></label>
+        <input type="range" id="compRatioSlider" min="1.5" max="8" step="0.5" value="3.0">
+        <div class="rrow"><span>1.5:1</span><span>8:1</span></div>
+      </div>
+    </div>
+  </div>
+
   <div class="slbl">Peak / True-Peak Limiter</div>
   <div class="lufs-card" style="border-color:rgba(255,204,0,.32);">
     <div class="lufs-header">
@@ -490,8 +525,8 @@
         <div class="rrow"><span>0.1 ms</span><span>80 ms</span></div>
       </div>
       <div class="lufs-field">
-        <label>Release (ms)  <span style="color:var(--yellow)" id="pkRelVal">100 ms</span></label>
-        <input type="range" id="pkRelSlider" min="1" max="8000" step="10" value="100">
+        <label>Release (ms)  <span style="color:var(--yellow)" id="pkRelVal">180 ms</span></label>
+        <input type="range" id="pkRelSlider" min="1" max="8000" step="10" value="180">
         <div class="rrow"><span>1 ms</span><span>8000 ms</span></div>
       </div>
     </div>
@@ -694,6 +729,8 @@ const sliders = [
   ['pkSlider',   'pkVal',   v => parseFloat(v).toFixed(1) + ' dB'],
   ['pkAtkSlider','pkAtkVal',v => v + ' ms'],
   ['pkRelSlider','pkRelVal',v => v + ' ms'],
+  ['compThreshSlider','compThreshVal',v => v + ' dB'],
+  ['compRatioSlider','compRatioVal',v => parseFloat(v).toFixed(1) + ':1'],
   ['cxSlider',   'cxVal',   v => v + ' dB'],
   ['lxSlider',   'lxVal',   v => v + ' dB'],
   ['sxSlider',   'sxVal',   v => v + ' dB'],
@@ -1302,7 +1339,10 @@ function updateFpsSyncInfo(){
 // down and letting a limiter/clipper catch the odd peak.
 function computeHeadroomComp(fc, lfe, sl, bl, dr, xs, eqGains, useFold, useDetail, useHaas, useEQ) {
   if (!useFold) return 1; // no fold, nothing to pad
-  return 0.7079; // -3dB fixed safety margin
+  return 0.5012; // -6dB fixed safety margin (increased from -3dB — confirmed via
+  // real-world testing that -3dB let the limiter engage too often/too hard
+  // on loud dialogue, producing audible crackling from the limiter's own
+  // gain-reduction character even though no sample ever actually clipped)
 }
 
 function setStatus(txt, cls) {
@@ -1671,21 +1711,43 @@ function buildFilter() {
     lines.push(`[eq_out]acopy[post_fps]`);
   }
 
+  // ── Smooth Compressor (RMS, soft-knee) — genuinely different detection
+  // from the hard limiter below, not just gentler settings on the same
+  // mechanism. RMS-based gain riding smooths average loudness gradually;
+  // the hard limiter downstream reacts to instantaneous peaks abruptly by
+  // design. Doing the day-to-day work here means the hard limiter should
+  // rarely need to engage hard on normal loud content, only on genuine
+  // rare outliers — directly targeting the abrupt-engagement character
+  // that caused audible crackling on loud dialogue.
+  const useCompressor = isOn('tog-compressor');
+  if (useCompressor) {
+    const compThreshDb = fv('compThreshSlider');
+    const compThreshLin = Math.pow(10, compThreshDb / 20).toFixed(6);
+    const compRatio = fv('compRatioSlider').toFixed(2);
+    lines.push(
+      `[post_fps]acompressor=threshold=${compThreshLin}:ratio=${compRatio}:` +
+      `attack=25:release=200:knee=6:makeup=1:detection=rms:link=maximum:mix=1[comp_out]`
+    );
+  } else {
+    lines.push(`[post_fps]acopy[comp_out]`);
+  }
+
   // linear=false (dynamic loudnorm) is deliberate — see earlier notes on why
   // linear=true re-inflates exactly the passage headroom compensation tamed.
   const pkLin = Math.pow(10, parseFloat(pk) / 20).toFixed(6);
 
   if (usePeak && useLUFS) {
-    lines.push(`[post_fps]alimiter=level_in=1:level_out=1:limit=${pkLin}:attack=${pkAtk}:release=${pkRel}:level=false[pre_lim]`);
+    lines.push(`[comp_out]alimiter=level_in=1:level_out=1:limit=${pkLin}:attack=${pkAtk}:release=${pkRel}:level=false[pre_lim]`);
     lines.push(`[pre_lim]loudnorm=I=${lufs}:TP=${tp}:LRA=${lra}:linear=false:print_format=none[lufs_out]`);
     lines.push(`[lufs_out]alimiter=level_in=1:level_out=1:limit=${pkLin}:attack=${pkAtk}:release=${pkRel}:level=false[out]`);
   } else if (usePeak && !useLUFS) {
-    lines.push(`[post_fps]alimiter=level_in=1:level_out=1:limit=${pkLin}:attack=${pkAtk}:release=${pkRel}:level=false[out]`);
+    lines.push(`[comp_out]alimiter=level_in=1:level_out=1:limit=${pkLin}:attack=${pkAtk}:release=${pkRel}:level=false[out]`);
   } else if (!usePeak && useLUFS) {
-    lines.push(`[post_fps]loudnorm=I=${lufs}:TP=${tp}:LRA=${lra}:linear=false:print_format=none[out]`);
+    lines.push(`[comp_out]loudnorm=I=${lufs}:TP=${tp}:LRA=${lra}:linear=false:print_format=none[out]`);
   } else {
-    lines.push(`[post_fps]acopy[out]`);
+    lines.push(`[comp_out]acopy[out]`);
   }
+
 
   return lines.join(';');
 }
