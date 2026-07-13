@@ -1,7 +1,8 @@
 # DIRECTIONS
 - Upmixing Stereo Audio like Dolby Atmos or want to DownMix Dolby Atmos to stereo? Here you go then :q
 ---
-
+![Screenshot](images/Screenshot 2026-07-12 194004.png)
+---
 <br>
 
 You must install Node.js: https://nodejs.org/
