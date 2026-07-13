@@ -603,6 +603,22 @@
       placeholder="Path to ffmpeg.exe">
   </div>
 
+  <div id="passthroughSection" style="display:none">
+    <div class="slbl">Same-Layout Conversion Mode</div>
+    <div class="tgrid" style="grid-template-columns:1fr">
+      <div class="ti on" id="tog-true-passthrough" onclick="toggle(this)">
+        <div class="sw"></div><div class="ti-txt">True passthrough — codec conversion only, zero DSP touches the audio (untoggle to still run DC removal / widener / Peak Limiter even with no remixing)</div>
+      </div>
+    </div>
+    <div class="path-hint">
+      With this on (default when input and output layouts match): the filter graph is <code>[0:a]acopy[out]</code> —
+      literally nothing but a direct copy into the encoder. Verified bit-for-bit identical to a raw codec-only
+      conversion. Untoggle only if you specifically want the safety chain (DC offset correction, Peak Limiter)
+      applied even without any channel remixing — useful if you're feeding in an already-hot master and want
+      the limiter as a safety net regardless.
+    </div>
+  </div>
+
   <div class="slbl">Framerate Sync Correction</div>
   <div class="tgrid" style="grid-template-columns:1fr">
     <div class="ti" id="tog-fps-sync" onclick="toggle(this); updateFpsSyncInfo();">
@@ -1070,14 +1086,17 @@ function onDirectionChange(){
   document.getElementById('channelMapSection').style.display = (inF === '71') ? 'block' : 'none';
 
   if (inF === outF){
-    summary.innerHTML = '<strong>Same layout in and out</strong> — this will just run the safety chain (DC removal / limiter / format conversion) with no channel remixing.';
+    summary.innerHTML = '<strong>Same layout in and out</strong> — by default this is a true passthrough: codec conversion only, no DSP touches the audio. See the toggle below to change that.';
     document.getElementById('downmixSection').style.display = 'none';
     document.getElementById('eqSection').style.display = 'none';
     document.getElementById('upmixSection').style.display = 'none';
+    document.getElementById('passthroughSection').style.display = 'block';
     updateMp3Availability();
     updateOutDirHint();
     return;
   }
+
+  document.getElementById('passthroughSection').style.display = 'none';
 
   const info = DIR_INFO[key];
   const isUpmix = chCount[outF] > chCount[inF];
@@ -1336,6 +1355,14 @@ function buildFilter() {
   // make sense for a partial fold like 7.1->5.1 (output stays multichannel)
   // or for upmixing. Only eligible for 71->stereo and 51->stereo.
   const isDetailEligible = !isUpmix && !isSame && outF === 'stereo';
+
+  // ── TRUE PASSTHROUGH ──
+  // If layouts match and this mode is on (default), skip every DSP stage
+  // entirely — literally just [0:a]acopy[out], nothing else touches the
+  // audio. Verified bit-for-bit identical to a raw codec-only conversion.
+  if (isSame && isOn('tog-true-passthrough')){
+    return `[0:a]acopy[out]`;
+  }
 
   const fc   = coeff('fcSlider');
   const lfe  = coeff('lfeSlider');
