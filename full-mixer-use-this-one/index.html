@@ -314,6 +314,20 @@
         <input type="range" id="sxSlider" min="-16" max="0" step="0.5" value="-4.4">
         <div class="rrow"><span>Off</span><span>Full</span></div>
       </div>
+      <div class="card">
+        <label>Back Level vs Side (7.1 only) <span class="va" id="backLevelVal">1.00×</span></label>
+        <input type="range" id="backLevelSlider" min="0.5" max="1.5" step="0.05" value="1.0">
+        <div class="rrow"><span>Quieter</span><span>Louder</span></div>
+        <div style="font-size:.6rem;color:var(--muted);margin-top:6px;line-height:1.6;">
+          Corrected back to neutral (1.0×) after further research — an earlier version of this default
+          incorrectly applied a downmix FOLD coefficient (how much of a channel to blend when collapsing
+          7.1 down to stereo) to this native-level question, which is a different problem. The actually
+          relevant source: Dolby's own Surround 7.1 Technical Paper specifies "82 dB becomes the
+          reference level for each of the four surround channels in both mixing and playback" — side
+          and back surrounds are calibrated to the SAME level in real 7.1 production, not one attenuated
+          relative to the other. Professional calibration practice confirms the same. Neutral is correct.
+        </div>
+      </div>
     </div>
     <div class="info-box">
       <strong>Honest limitation:</strong> upmixing cannot recover audio that was never recorded.
@@ -345,9 +359,15 @@
       <div class="rrow"><span>Off</span><span>Full</span></div>
     </div>
     <div class="card">
-      <label>BL/BR Rear Level  <span class="vd" id="blVal">65%</span></label>
-      <input type="range" id="blSlider" min="0" max="100" step="5" value="65">
+      <label>BL/BR Rear Level  <span class="vd" id="blVal">50%</span></label>
+      <input type="range" id="blSlider" min="0" max="100" step="5" value="50">
       <div class="rrow"><span>Off</span><span>Full</span></div>
+      <div style="font-size:.6rem;color:var(--muted);margin-top:6px;line-height:1.6;">
+        Matches documented real-world 7.1→stereo downmix practice: side surrounds fold at 0.707
+        (−3dB, same as the ITU-R BS.775-standard center coefficient), back channels fold at 0.5 —
+        a ratio of 0.5/0.707 ≈ 0.707, i.e. back sits −3dB below side. Previously 65% (an
+        unverified estimate); this is the actual documented coefficient relationship, not a guess.
+      </div>
     </div>
     <div class="card">
       <label>Detail Recovery Blend  <span class="va" id="drVal">30%</span></label>
@@ -734,6 +754,7 @@ const sliders = [
   ['cxSlider',   'cxVal',   v => v + ' dB'],
   ['lxSlider',   'lxVal',   v => v + ' dB'],
   ['sxSlider',   'sxVal',   v => v + ' dB'],
+  ['backLevelSlider', 'backLevelVal', v => parseFloat(v).toFixed(2) + '×'],
   ['brSlider',   'brVal',   v => v + ' kbps'],
 ];
 sliders.forEach(([id, vid, fmt]) => {
@@ -1404,6 +1425,17 @@ function buildFilter() {
     return `[0:a]acopy[out]`;
   }
 
+  // Coefficient defaults grounded in ITU-R BS.775 / documented real-world 7.1
+  // downmix practice, not estimates: center=0.707 (-3dB, matches BS.775's
+  // stereophonic downmix standard exactly), side surrounds=0.707 (matches
+  // ITU-R BS.2054's cited LoRo downmix weightings), back=0.5 (documented
+  // 7.1->stereo Lb coefficient, giving a 0.5/0.707≈0.707 back-vs-side ratio).
+  // LFE at 0.40 is a deliberate departure from strict broadcast convention
+  // (BS.775 notes LFE is "often not included" in a 2-channel downmix at all,
+  // sometimes silent by design) — kept present and audible here specifically
+  // to preserve bass, matching this tool's audiophile/preserve-everything
+  // goal rather than the broadcast-minimal default. Crossover default of
+  // 100Hz sits within BS.775's specified LFE passband of 20-120Hz.
   const fc   = coeff('fcSlider');
   const lfe  = coeff('lfeSlider');
   const sl   = coeff('slSlider');
@@ -1478,10 +1510,24 @@ function buildFilter() {
       lines.push(`[FLp][FRp][FC_out][LFE_out][BL_out][BR_out]amerge=inputs=6,aformat=channel_layouts=5.1[${outLabel}]`);
     } else {
       lines.push(`[side_hp]asplit=4[side_a][side_b][side_c][side_d]`);
-      lines.push(`[side_a]volume=${sx}[BL_out]`);
-      lines.push(`[side_b]volume=-${sx}[BR_out]`);
-      lines.push(`[side_c]volume=${sx}[SL_out]`);
-      lines.push(`[side_d]volume=-${sx}[SR_out]`);
+      // Back/side level default is neutral (1.0x), grounded in Dolby's own
+      // Surround 7.1 Technical Paper: "82 dB becomes the reference level for
+      // each of the four surround channels in both mixing and playback" —
+      // side and back surrounds are calibrated to the SAME level in real
+      // 7.1 production, confirmed by professional calibration practice.
+      // (An earlier version of this default mistakenly applied a downmix
+      // FOLD coefficient — how much of a channel to blend when collapsing
+      // 7.1 to stereo — to this native-level question; that's a different
+      // problem with a different correct answer, and has been corrected.)
+      const backRatio = fv('backLevelSlider');
+      lines.push(`[side_a]volume=${sx}[SL_raw]`);
+      lines.push(`[side_b]volume=-${sx}[SR_raw]`);
+      lines.push(`[side_c]volume=${(parseFloat(sx)*backRatio).toFixed(4)}[BL_pre]`);
+      lines.push(`[side_d]volume=-${(parseFloat(sx)*backRatio).toFixed(4)}[BR_pre]`);
+      lines.push(`[BL_pre]lowpass=f=10000[BL_out]`);
+      lines.push(`[BR_pre]lowpass=f=10000[BR_out]`);
+      lines.push(`[SL_raw]acopy[SL_out]`);
+      lines.push(`[SR_raw]acopy[SR_out]`);
       lines.push(`[FLp][FRp][FC_out][LFE_out][BL_out][BR_out][SL_out][SR_out]amerge=inputs=8,aformat=channel_layouts=7.1[${outLabel}]`);
     }
   } else if (isUpmix && inF === '51' && outF === '71') {
