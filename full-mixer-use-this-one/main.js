@@ -106,6 +106,49 @@ function routeArgsThroughTempFiles(rawArgs) {
   return { args: finalArgs, tempPaths };
 }
 
+// Detects the actual channel count of a loaded file via ffprobe, so the
+// UI can warn/auto-correct when the selected Input Channel Layout doesn't
+// match reality. This directly prevents a real, confirmed failure mode:
+// selecting "7.1" for a genuinely 5.1 file silently routes through the
+// wrong downmix coefficients (the 7.1-specific back-channel coefficient,
+// correct only when real side+back surrounds both exist, gets misapplied
+// to a 5.1 file's only surround pair) — channel routing itself isn't
+// broken, but content gets measurably under-preserved as a result.
+ipcMain.handle('get-channel-count', async (event, payload) => {
+  return new Promise((resolve) => {
+    const ffmpegPath = payload.ffmpeg;
+    const filePath = payload.filePath;
+    // ffprobe ships alongside ffmpeg in the same bin directory in every
+    // standard distribution (gyan.dev, BtbN, etc.) — derive its path rather
+    // than requiring a second manually-configured field.
+    const ffprobePath = ffmpegPath.replace(/ffmpeg(\.exe)?$/i, (m, ext) => 'ffprobe' + (ext || ''));
+
+    const args = ['-v', 'error', '-select_streams', 'a:0', '-show_entries', 'stream=channels', '-of', 'csv=p=0', filePath];
+    let proc;
+    try {
+      proc = spawn(ffprobePath, args, { windowsHide: true });
+    } catch (err) {
+      resolve({ error: String(err && err.message || err) });
+      return;
+    }
+    let stdout = "";
+    let stderr = "";
+    proc.stdout.on("data", d => stdout += d.toString());
+    proc.stderr.on("data", d => stderr += d.toString());
+    proc.on("close", code => {
+      if (code !== 0) {
+        resolve({ error: stderr || `ffprobe exited with code ${code}` });
+        return;
+      }
+      const channels = parseInt(stdout.trim(), 10);
+      resolve({ channels: Number.isNaN(channels) ? null : channels });
+    });
+    proc.on("error", err => {
+      resolve({ error: err.message });
+    });
+  });
+});
+
 ipcMain.handle('run-ffmpeg', async (event, payload) => {
   return new Promise((resolve) => {
 
