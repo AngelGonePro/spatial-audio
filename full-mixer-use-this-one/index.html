@@ -232,6 +232,7 @@
     </div>
   </div>
   <div class="dir-summary" id="dirSummary"></div>
+  <div id="channelMismatchBanner" style="display:none; margin-top:10px; padding:10px 14px; background:rgba(255,92,122,.1); border:1px solid var(--red); border-radius:8px; font-size:.72rem; color:var(--text); line-height:1.7;"></div>
 
   <div class="slbl">Input File — 7.1 / Dolby Atmos</div>
   <div id="dropzone">
@@ -359,14 +360,18 @@
       <div class="rrow"><span>Off</span><span>Full</span></div>
     </div>
     <div class="card">
-      <label>BL/BR Rear Level  <span class="vd" id="blVal">50%</span></label>
-      <input type="range" id="blSlider" min="0" max="100" step="5" value="50">
+      <label>BL/BR Rear Level  <span class="vd" id="blVal">70.7%</span></label>
+      <input type="range" id="blSlider" min="0" max="100" step="5" value="70.7">
       <div class="rrow"><span>Off</span><span>Full</span></div>
       <div style="font-size:.6rem;color:var(--muted);margin-top:6px;line-height:1.6;">
-        Matches documented real-world 7.1→stereo downmix practice: side surrounds fold at 0.707
-        (−3dB, same as the ITU-R BS.775-standard center coefficient), back channels fold at 0.5 —
-        a ratio of 0.5/0.707 ≈ 0.707, i.e. back sits −3dB below side. Previously 65% (an
-        unverified estimate); this is the actual documented coefficient relationship, not a guess.
+        Deliberately matches side surrounds (0.707) instead of the documented ITU/broadcast
+        7.1 back-channel coefficient (0.5, a ratio of ≈0.707 below side). That reduction exists
+        specifically to manage loudness in pipelines with no sophisticated downstream safety
+        net — this tool has one (the two-stage Smooth Compressor + Peak Limiter, tested against
+        genuinely loud/dense content without distortion), so pre-emptively discarding real
+        channel content to solve a loudness problem that's already handled elsewhere works
+        against the actual goal here: preserving everything. Confirmed this was measurably
+        under-preserving content (background vocals) in real Atmos music downmixes.
       </div>
     </div>
     <div class="card">
@@ -1151,6 +1156,7 @@ function onDirectionChange(){
     document.getElementById('passthroughSection').style.display = 'block';
     updateMp3Availability();
     updateOutDirHint();
+    checkChannelMismatch();
     return;
   }
 
@@ -1166,6 +1172,7 @@ function onDirectionChange(){
   document.getElementById('slCard').style.display = (outF === '51' && !isUpmix) ? 'none' : 'block';
   updateMp3Availability();
   updateOutDirHint();
+  checkChannelMismatch();
 }
 
 function outFmtLabel(){
@@ -1292,6 +1299,38 @@ function loadFile(f) {
   setStatus('File loaded — ready', '');
   oggArtFile = null;
   tryAutoExtractArt(f);
+  checkChannelMismatch();
+}
+
+// Confirmed, real failure mode: selecting "7.1" as Input for a genuinely
+// 5.1 file doesn't break channel routing (verified — all real channels
+// still land correctly), but it does route through the 7.1-specific
+// downmix coefficients, which measurably under-preserve content in a
+// 5.1 file's sole surround pair (the coefficient is only correct when
+// real side+back surrounds both exist). This checks the actual file
+// against ffprobe and warns/offers to auto-correct rather than relying
+// on the user to remember to match the dropdown to their real file.
+async function checkChannelMismatch(){
+  if (!window.electronAPI?.getChannelCount) return; // no-op outside Electron
+  const ffmpeg = document.getElementById('ffmpegPath').value.trim();
+  if (!ffmpeg || !filePath) return;
+  const result = await window.electronAPI.getChannelCount({ ffmpeg, filePath });
+  if (result.error || result.channels == null) return; // fail silent, don't block on detection issues
+
+  const actualLayout = {2:'stereo', 6:'51', 8:'71'}[result.channels];
+  const selectedLayout = document.getElementById('inFmt').value;
+  const banner = document.getElementById('channelMismatchBanner');
+
+  if (actualLayout && actualLayout !== selectedLayout){
+    banner.style.display = 'block';
+    banner.innerHTML = `⚠ This file is actually <strong>${result.channels}-channel (${actualLayout === '51' ? '5.1' : actualLayout === '71' ? '7.1' : 'stereo'})</strong>, `
+      + `but Input is set to <strong>${selectedLayout === '51' ? '5.1' : selectedLayout === '71' ? '7.1' : 'stereo'}</strong>. `
+      + `This will route through the wrong downmix coefficients and measurably under-preserve content in your surround channels. `
+      + `<button onclick="document.getElementById('inFmt').value='${actualLayout}'; onDirectionChange(); document.getElementById('channelMismatchBanner').style.display='none';" `
+      + `style="margin-left:8px;background:var(--accent);color:#04141c;border:none;padding:4px 10px;border-radius:5px;cursor:pointer;font-weight:700;font-size:.65rem;">Fix it (set to ${actualLayout === '51' ? '5.1' : actualLayout === '71' ? '7.1' : 'stereo'})</button>`;
+  } else {
+    banner.style.display = 'none';
+  }
 }
 
 function toggle(el) { el.classList.toggle('on'); }
@@ -1597,11 +1636,17 @@ function buildFilter() {
         lines.push(`[SL]acopy[SLh]`);
         lines.push(`[SR]acopy[SRh]`);
       }
-      lines.push(`[BL]volume=0.7[BLv]`);
-      lines.push(`[SLh]volume=0.7[SLv]`);
+      // Full unity (1.0/1.0) instead of the previous 0.7/0.7 — same
+      // reasoning as the 7.1->Stereo fix: reducing both inputs to avoid a
+      // hot merged channel is solving a loudness problem the downstream
+      // safety chain (Smooth Compressor + Peak Limiter) already handles.
+      // Preserving full content here and trusting that chain, consistent
+      // with every other direction.
+      lines.push(`[BL]volume=1.0[BLv]`);
+      lines.push(`[SLh]volume=1.0[SLv]`);
       lines.push(`[BLv][SLv]amix=inputs=2:weights=1 1:normalize=0[BLo]`);
-      lines.push(`[BR]volume=0.7[BRv]`);
-      lines.push(`[SRh]volume=0.7[SRv]`);
+      lines.push(`[BR]volume=1.0[BRv]`);
+      lines.push(`[SRh]volume=1.0[SRv]`);
       lines.push(`[BRv][SRv]amix=inputs=2:weights=1 1:normalize=0[BRo]`);
       lines.push(`[FL][FR][FC][LFE][BLo][BRo]amerge=inputs=6,aformat=channel_layouts=5.1[${outLabel}]`);
     } else if (useFold && inF === '51' && outF === 'stereo') {
@@ -1618,12 +1663,22 @@ function buildFilter() {
       lines.push(`[FL]volume=1.0[l1]`);
       lines.push(`[FCa]volume=${fc}[l2]`);
       lines.push(`[LFEa]volume=${lfe}[l3]`);
-      lines.push(`[BLh]volume=${bl}[l4]`);
+      // 5.1 has only ONE surround pair — no separate side channels exist to
+      // avoid double-counting against. The 0.5 "bl" coefficient is a 7.1-
+      // specific value, only correct when BOTH side and back pairs exist
+      // simultaneously (it deliberately avoids re-summing the same surround
+      // content twice). Applying it here was a real error — it measurably
+      // under-preserved content routed to these channels (confirmed: user's
+      // Atmos music downmix was losing background vocals mixed into BL/BR).
+      // 5.1's sole surround pair plays the same functional role as 7.1's
+      // SIDE pair (the primary/only surround signal), so it uses the same
+      // 0.707 coefficient (sl), not the reduced back-specific one.
+      lines.push(`[BLh]volume=${sl}[l4]`);
       lines.push(`[l1][l2][l3][l4]amix=inputs=4:weights=1 1 1 1:normalize=0[Lo]`);
       lines.push(`[FR]volume=1.0[r1]`);
       lines.push(`[FCb]volume=${fc}[r2]`);
       lines.push(`[LFEb]volume=${lfe}[r3]`);
-      lines.push(`[BRh]volume=${bl}[r4]`);
+      lines.push(`[BRh]volume=${sl}[r4]`);
       lines.push(`[r1][r2][r3][r4]amix=inputs=4:weights=1 1 1 1:normalize=0[Ro]`);
       lines.push(`[Lo][Ro]amerge=inputs=2,aformat=channel_layouts=stereo[${outLabel}]`);
     } else {
