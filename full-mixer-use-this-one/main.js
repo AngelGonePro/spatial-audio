@@ -114,6 +114,44 @@ function routeArgsThroughTempFiles(rawArgs) {
 // correct only when real side+back surrounds both exist, gets misapplied
 // to a 5.1 file's only surround pair) — channel routing itself isn't
 // broken, but content gets measurably under-preserved as a result.
+// Gets the exact duration of a loaded file via ffprobe, for the Duration
+// Correction feature — fixing a real class of AV sync problem where a
+// source AC3/audio stream's actual decoded content is measurably shorter
+// than the video's true runtime (a property of how the source was
+// originally encoded, confirmed via direct sample-count testing — not
+// something introduced by this tool's processing).
+ipcMain.handle('get-duration', async (event, payload) => {
+  return new Promise((resolve) => {
+    const ffmpegPath = payload.ffmpeg;
+    const filePath = payload.filePath;
+    const ffprobePath = ffmpegPath.replace(/ffmpeg(\.exe)?$/i, (m, ext) => 'ffprobe' + (ext || ''));
+
+    const args = ['-v', 'error', '-select_streams', 'a:0', '-show_entries', 'format=duration', '-of', 'default=noprint_wrappers=1:nokey=1', filePath];
+    let proc;
+    try {
+      proc = spawn(ffprobePath, args, { windowsHide: true });
+    } catch (err) {
+      resolve({ error: String(err && err.message || err) });
+      return;
+    }
+    let stdout = "";
+    let stderr = "";
+    proc.stdout.on("data", d => stdout += d.toString());
+    proc.stderr.on("data", d => stderr += d.toString());
+    proc.on("close", code => {
+      if (code !== 0) {
+        resolve({ error: stderr || `ffprobe exited with code ${code}` });
+        return;
+      }
+      const duration = parseFloat(stdout.trim());
+      resolve({ duration: Number.isNaN(duration) ? null : duration });
+    });
+    proc.on("error", err => {
+      resolve({ error: err.message });
+    });
+  });
+});
+
 ipcMain.handle('get-channel-count', async (event, payload) => {
   return new Promise((resolve) => {
     const ffmpegPath = payload.ffmpeg;

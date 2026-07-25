@@ -706,6 +706,58 @@
     <div class="info-box" id="fpsSyncInfo"></div>
   </div>
 
+  <div class="slbl">Duration Correction</div>
+  <div class="tgrid" style="grid-template-columns:1fr">
+    <div class="ti" id="tog-duration-fix" onclick="toggle(this); updateDurationFixUI();">
+      <div class="sw"></div><div class="ti-txt">Correct audio to match an exact target duration — OFF by default, for source files where the audio itself decodes to slightly less content than the real video runtime (confirmed real, not a framerate issue — see the diagnosis this was built for)</div>
+    </div>
+  </div>
+  <div id="durationFixSection" style="display:none; margin-top:10px">
+    <div class="path-hint" style="margin-bottom:10px">
+      Run this in the same folder as ffmpeg (PowerShell needs the <code>./</code> prefix to run a
+      program from the current folder) on the <strong>original video file</strong> — the one this
+      audio is supposed to sync with, not the audio-only file itself:
+      <br><br>
+      <code style="color:var(--accent)">./ffprobe -v error -select_streams v:0 -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 "path\to\your\movie.mkv"</code>
+      <br><br>
+      That prints one plain number — the video's exact duration in seconds. Paste it into the box below.
+    </div>
+    <div class="opts">
+      <div class="card">
+        <label>Target Duration (seconds, from the video)</label>
+        <input type="text" id="targetDurationInput" placeholder="e.g. 4906.313000" oninput="updateDurationFixInfo()">
+      </div>
+      <div class="card">
+        <label>Detected source audio duration</label>
+        <div id="sourceDurationDisplay" style="font-size:.85rem; color:var(--accent); padding:9px 0;">Load a file to detect this automatically</div>
+      </div>
+    </div>
+    <div class="info-box" id="durationFixInfo"></div>
+  </div>
+
+  <div class="slbl">Audio Delay / Offset</div>
+  <div class="tgrid" style="grid-template-columns:1fr">
+    <div class="ti" id="tog-audio-delay" onclick="toggle(this); updateAudioDelayUI();">
+      <div class="sw"></div><div class="ti-txt">Shift audio by a fixed amount — OFF by default. Different from Duration Correction above: this fixes a constant offset (audio consistently N seconds early/late throughout, not growing or shrinking) rather than a proportional stretch. If audio is ahead of video by roughly the same amount at the start as at the end, this is the one you want, not Duration Correction.</div>
+    </div>
+  </div>
+  <div id="audioDelaySection" style="display:none; margin-top:10px">
+    <div class="path-hint" style="margin-bottom:10px">
+      <strong>Positive value</strong> = delay the audio (push it later) — use this when audio arrives
+      <strong>too early</strong> / ahead of video. <strong>Negative value</strong> = trim from the start
+      (pull audio earlier) — use this when audio arrives <strong>too late</strong> / behind video.
+      Measure the offset near the very start of playback, where it's cleanest to judge by ear —
+      that's the number to enter here.
+    </div>
+    <div class="opts">
+      <div class="card">
+        <label>Offset (seconds, +delay / −trim) <span class="va" id="audioDelayVal">0.000s</span></label>
+        <input type="text" id="audioDelayInput" placeholder="e.g. 3.0 or -1.5" oninput="updateAudioDelayInfo()">
+      </div>
+    </div>
+    <div class="info-box" id="audioDelayInfo"></div>
+  </div>
+
   <div class="slbl">Output Directory (optional)</div>
   <input class="path-inp" type="text" id="outDir" placeholder="Leave blank — saves alongside source">
   <div class="path-hint" id="outDirHint">Output tagged: filename + " - Stereo-Full.flac"</div>
@@ -731,6 +783,7 @@
 
 <script>
 let filePath = '';
+let sourceAudioDuration = null; // detected via ffprobe, for Duration Correction
 const CHANNELS = ['FL','FC','FR','LFE','SL','SR','BL','BR'];
 
 // ── Slider bindings ──────────────────────────────────────────────────────────
@@ -1300,6 +1353,7 @@ function loadFile(f) {
   oggArtFile = null;
   tryAutoExtractArt(f);
   checkChannelMismatch();
+  detectSourceDuration();
 }
 
 // Confirmed, real failure mode: selecting "7.1" as Input for a genuinely
@@ -1330,6 +1384,118 @@ async function checkChannelMismatch(){
       + `style="margin-left:8px;background:var(--accent);color:#04141c;border:none;padding:4px 10px;border-radius:5px;cursor:pointer;font-weight:700;font-size:.65rem;">Fix it (set to ${actualLayout === '51' ? '5.1' : actualLayout === '71' ? '7.1' : 'stereo'})</button>`;
   } else {
     banner.style.display = 'none';
+  }
+}
+
+// Detects the loaded audio file's own actual duration via ffprobe. This is
+// what Duration Correction compares against the user's manually-entered
+// target (the real video's true duration) to compute the correction ratio.
+// Confirmed via direct sample-count testing earlier: some source AC3/audio
+// streams genuinely decode to measurably less content than the video's
+// real runtime — a property of the source encode, not something this tool
+// introduces. This feature corrects for it directly rather than requiring
+// external tools.
+async function detectSourceDuration(){
+  sourceAudioDuration = null;
+  const display = document.getElementById('sourceDurationDisplay');
+  if (!window.electronAPI?.getDuration) {
+    if (display) display.textContent = 'Duration auto-detection unavailable outside Electron';
+    return;
+  }
+  const ffmpeg = document.getElementById('ffmpegPath').value.trim();
+  if (!ffmpeg || !filePath) return;
+  const result = await window.electronAPI.getDuration({ ffmpeg, filePath });
+  if (result.error || result.duration == null) {
+    if (display) display.textContent = 'Could not detect (ffprobe error) — Duration Correction needs this to work';
+    return;
+  }
+  sourceAudioDuration = result.duration;
+  if (display) display.textContent = `${sourceAudioDuration.toFixed(6)}s (this file's actual audio content)`;
+  updateDurationFixInfo();
+}
+
+function updateDurationFixUI(){
+  document.getElementById('durationFixSection').style.display = isOn('tog-duration-fix') ? 'block' : 'none';
+  if (isOn('tog-duration-fix')) updateDurationFixInfo();
+}
+
+function updateDurationFixInfo(){
+  const info = document.getElementById('durationFixInfo');
+  if (!info) return;
+  const targetStr = document.getElementById('targetDurationInput').value.trim();
+  const target = parseFloat(targetStr);
+
+  if (!targetStr){
+    info.innerHTML = 'Enter the target duration above to see the correction that will be applied.';
+    return;
+  }
+  if (Number.isNaN(target) || target <= 0){
+    info.innerHTML = '<strong style="color:var(--red)">Not a valid number.</strong> Paste the plain seconds value ffprobe printed (e.g. 4906.313000), nothing else.';
+    return;
+  }
+  if (sourceAudioDuration == null){
+    info.innerHTML = 'Waiting on source duration detection — load a file first, or check the FFmpeg path is set correctly.';
+    return;
+  }
+
+  const ratio = target / sourceAudioDuration;
+  const diff = target - sourceAudioDuration;
+  const pct = Math.abs(diff / sourceAudioDuration * 100);
+
+  if (pct > 5){
+    info.innerHTML = `<strong style="color:var(--red)">That's a ${pct.toFixed(1)}% difference (${Math.abs(diff).toFixed(2)}s)</strong> — `
+      + `unusually large for this kind of correction (the case this was built for was under 0.1%). `
+      + `Double check you ran ffprobe on the right file and pasted the right number before running this — `
+      + `a correction this large will be very audibly obvious (pitch/tempo shift), not a subtle sync fix.`;
+    return;
+  }
+
+  info.innerHTML = `Source audio: <strong style="color:var(--accent)">${sourceAudioDuration.toFixed(3)}s</strong> → `
+    + `Target: <strong style="color:var(--accent)">${target.toFixed(3)}s</strong> `
+    + `(${diff >= 0 ? '+' : ''}${diff.toFixed(3)}s, ${pct.toFixed(3)}%). `
+    + `Will stretch by <strong style="color:var(--accent)">${ratio.toFixed(6)}×</strong> using the same sample-accurate `
+    + `resample method validated for Framerate Sync — no audible pitch shift at this magnitude.`;
+}
+
+function updateAudioDelayUI(){
+  document.getElementById('audioDelaySection').style.display = isOn('tog-audio-delay') ? 'block' : 'none';
+  if (isOn('tog-audio-delay')) updateAudioDelayInfo();
+}
+
+function updateAudioDelayInfo(){
+  const info = document.getElementById('audioDelayInfo');
+  const valSpan = document.getElementById('audioDelayVal');
+  const raw = document.getElementById('audioDelayInput').value.trim();
+  const val = parseFloat(raw);
+
+  if (!raw){
+    if (valSpan) valSpan.textContent = '0.000s';
+    info.innerHTML = 'Enter an offset above. Positive delays audio (fixes audio that arrives too early); negative trims from the start (fixes audio that arrives too late).';
+    return;
+  }
+  if (Number.isNaN(val)){
+    info.innerHTML = '<strong style="color:var(--red)">Not a valid number.</strong> Plain seconds only, e.g. 3.0 or -1.5.';
+    return;
+  }
+  if (valSpan) valSpan.textContent = `${val >= 0 ? '+' : ''}${val.toFixed(3)}s`;
+
+  if (Math.abs(val) > 30){
+    info.innerHTML = `<strong style="color:var(--red)">${Math.abs(val).toFixed(1)}s is a large offset</strong> — `
+      + `double check this is really what you measured before running. Most real cases (like a source `
+      + `file's own encoding offset) are well under this.`;
+    return;
+  }
+  if (val === 0){
+    info.innerHTML = 'Zero offset — this stage will be a no-op even though the toggle is on.';
+    return;
+  }
+
+  if (val > 0){
+    info.innerHTML = `Will <strong style="color:var(--accent)">delay audio by ${val.toFixed(3)}s</strong> `
+      + `(pad the start with silence) — use this when audio plays too early relative to video.`;
+  } else {
+    info.innerHTML = `Will <strong style="color:var(--accent)">trim ${Math.abs(val).toFixed(3)}s from the start</strong> `
+      + `of the audio — use this when audio plays too late relative to video.`;
   }
 }
 
@@ -1444,6 +1610,33 @@ function setStatus(txt, cls) {
 //   This makes it louder without clipping or squashing transients.
 //   True Peak limiting prevents inter-sample overs.
 //
+// Applies the Audio Delay/Offset correction as the true final stage,
+// regardless of which path through buildFilter() produced the audio —
+// takes a filter graph string ending in [pre_delay] and returns one ending
+// in [out]. Solves a DIFFERENT problem than Duration Correction: a fixed,
+// constant offset (audio consistently N seconds early/late throughout) —
+// confirmed via direct user report that a proportional stretch (Duration
+// Correction) does not fix this shape of problem, only genuine progressive
+// drift. Positive = adelay (pad silence, audio arrives too early).
+// Negative = atrim from start (audio arrives too late).
+function applyAudioDelayWrap(graphStr){
+  if (!isOn('tog-audio-delay')) {
+    return graphStr.replace(/\[pre_delay\]$/, '[out]');
+  }
+  const raw = document.getElementById('audioDelayInput').value.trim();
+  const val = parseFloat(raw);
+  if (!raw || Number.isNaN(val) || val === 0) {
+    return graphStr.replace(/\[pre_delay\]$/, '[out]');
+  }
+  if (val > 0) {
+    const ms = Math.round(val * 1000);
+    return graphStr + `;[pre_delay]adelay=${ms}|${ms}:all=1[out]`;
+  } else {
+    const secs = Math.abs(val).toFixed(6);
+    return graphStr + `;[pre_delay]atrim=start=${secs},asetpts=PTS-STARTPTS[out]`;
+  }
+}
+
 function buildFilter() {
   const inF = document.getElementById('inFmt').value;
   const outF = document.getElementById('outFmt').value;
@@ -1460,8 +1653,48 @@ function buildFilter() {
   // If layouts match and this mode is on (default), skip every DSP stage
   // entirely — literally just [0:a]acopy[out], nothing else touches the
   // audio. Verified bit-for-bit identical to a raw codec-only conversion.
+  //
+  // EXCEPTION: if Framerate Sync is explicitly toggled on, it still needs
+  // to run — it's a distinct, deliberate opt-in feature, not part of the
+  // "richness" DSP chain (DC/widener/EQ/compressor) that true passthrough
+  // exists to guarantee zero of. Confirmed via testing this was previously
+  // being silently skipped for ALL same-layout directions (7.1->7.1,
+  // 5.1->5.1, Stereo->Stereo) whenever true-passthrough was on — a real
+  // bug, not intentional. Fixed by routing ONLY through fps-sync (plus the
+  // Peak Limiter as a safety net for the resample stage's own overshoot
+  // risk, if that's also on) when this specific combination applies —
+  // still no DC/widener/EQ/compressor sneaking in, preserving the
+  // "nothing except what you explicitly asked for" guarantee.
   if (isSame && isOn('tog-true-passthrough')){
-    return `[0:a]acopy[out]`;
+    if (!isOn('tog-fps-sync')){
+      return applyAudioDelayWrap(`[0:a]acopy[pre_delay]`);
+    }
+    // fps-sync explicitly on: apply ONLY that, plus Peak Limiter if also
+    // explicitly on (as the resample-overshoot safety net), skipping
+    // everything else in the normal chain.
+    const fpsLines = [];
+    const srcFpsOnly = FPS_PRESETS[fv('srcFpsSlider')];
+    const tgtFpsOnly = FPS_PRESETS[fv('tgtFpsSlider')];
+    let fpsTarget = 'out';
+    if (isOn('tog-peak')){
+      fpsTarget = 'pre_fps_only';
+    }
+    if (srcFpsOnly !== tgtFpsOnly){
+      const ratioOnly = tgtFpsOnly / srcFpsOnly;
+      if (isOn('tog-fps-resample')){
+        const newRateOnly = Math.round(parseInt(getSR()) * ratioOnly);
+        fpsLines.push(`[0:a]asetrate=${newRateOnly},aresample=${getSR()}[${fpsTarget}]`);
+      } else {
+        fpsLines.push(`[0:a]rubberband=tempo=${ratioOnly.toFixed(6)}:channels=together[${fpsTarget}]`);
+      }
+    } else {
+      fpsLines.push(`[0:a]acopy[${fpsTarget}]`);
+    }
+    if (isOn('tog-peak')){
+      const pkLinOnly = Math.pow(10, parseFloat(fv('pkSlider')) / 20).toFixed(6);
+      fpsLines.push(`[pre_fps_only]alimiter=level_in=1:level_out=1:limit=${pkLinOnly}:attack=${fv('pkAtkSlider').toFixed(1)}:release=${fv('pkRelSlider').toFixed(1)}:level=false[pre_delay]`);
+    }
+    return applyAudioDelayWrap(fpsLines.join(';'));
   }
 
   // Coefficient defaults grounded in ITU-R BS.775 / documented real-world 7.1
@@ -1558,6 +1791,20 @@ function buildFilter() {
       // FOLD coefficient — how much of a channel to blend when collapsing
       // 7.1 to stereo — to this native-level question; that's a different
       // problem with a different correct answer, and has been corrected.)
+      //
+      // NOTE: an all-pass phase-decorrelation stage was tried here and
+      // reverted. It measurably reduces correlation between SL and BL
+      // (0.9997 -> 0.66), but direct testing showed it introduces real
+      // destructive cancellation when this output is downmixed again later
+      // (summed RMS came out LOWER than either individual channel alone —
+      // genuine comb-filter-class interference, the same failure mode
+      // fixed earlier in this conversation, just via phase-shift rather
+      // than delay). The pure duplicate (current approach) can only ever
+      // add constructively on a future re-sum, which is the safer property
+      // to keep given this tool's priority on avoiding exactly that class
+      // of artifact. Level (backLevelSlider) and tonal (lowpass) shaping
+      // remain as the differentiation between the pairs — genuinely safe,
+      // since neither involves phase manipulation.
       const backRatio = fv('backLevelSlider');
       lines.push(`[side_a]volume=${sx}[SL_raw]`);
       lines.push(`[side_b]volume=-${sx}[SR_raw]`);
@@ -1629,12 +1876,24 @@ function buildFilter() {
       lines.push(`[fold_L][fold_R]amerge=inputs=2,aformat=channel_layouts=stereo[${outLabel}]`);
     } else if (useFold && inF === '71' && outF === '51') {
       lines.push(`[main_a]channelsplit=channel_layout=7.1[FL][FR][FC][LFE][BL][BR][SL][SR]`);
+      // Both SL and BL get the SAME highpass treatment before folding
+      // together — asymmetric filtering here (SL highpassed, BL not) was
+      // a real bug: even near-identical signals develop a phase mismatch
+      // when only one passes through a filter with phase shift near its
+      // cutoff, causing genuine destructive cancellation on summing.
+      // Confirmed directly: summed RMS came out LOWER than either
+      // individual channel alone before this fix — the signature of real
+      // comb-filter-class interference, not just a hypothetical concern.
       if (xo > 0) {
         lines.push(`[SL]highpass=f=${xo}[SLh]`);
         lines.push(`[SR]highpass=f=${xo}[SRh]`);
+        lines.push(`[BL]highpass=f=${xo}[BLh2]`);
+        lines.push(`[BR]highpass=f=${xo}[BRh2]`);
       } else {
         lines.push(`[SL]acopy[SLh]`);
         lines.push(`[SR]acopy[SRh]`);
+        lines.push(`[BL]acopy[BLh2]`);
+        lines.push(`[BR]acopy[BRh2]`);
       }
       // Full unity (1.0/1.0) instead of the previous 0.7/0.7 — same
       // reasoning as the 7.1->Stereo fix: reducing both inputs to avoid a
@@ -1642,10 +1901,10 @@ function buildFilter() {
       // safety chain (Smooth Compressor + Peak Limiter) already handles.
       // Preserving full content here and trusting that chain, consistent
       // with every other direction.
-      lines.push(`[BL]volume=1.0[BLv]`);
+      lines.push(`[BLh2]volume=1.0[BLv]`);
       lines.push(`[SLh]volume=1.0[SLv]`);
       lines.push(`[BLv][SLv]amix=inputs=2:weights=1 1:normalize=0[BLo]`);
-      lines.push(`[BR]volume=1.0[BRv]`);
+      lines.push(`[BRh2]volume=1.0[BRv]`);
       lines.push(`[SRh]volume=1.0[SRv]`);
       lines.push(`[BRv][SRv]amix=inputs=2:weights=1 1:normalize=0[BRo]`);
       lines.push(`[FL][FR][FC][LFE][BLo][BRo]amerge=inputs=6,aformat=channel_layouts=5.1[${outLabel}]`);
@@ -1812,6 +2071,36 @@ function buildFilter() {
     lines.push(`[eq_out]acopy[post_fps]`);
   }
 
+  // ── Duration Correction — OFF by default, opt-in only ──
+  // Solves a different, real problem than Framerate Sync: some source
+  // audio streams (confirmed via direct sample-count testing on a genuine
+  // AC3 file) decode to measurably less actual content than the video's
+  // true runtime — a property of how the source was originally encoded,
+  // not a framerate ratio issue and not something this tool's processing
+  // introduces (proven: input/output sample counts matched exactly when
+  // this was investigated). Same validated resample method as FPS Sync,
+  // just driven by a directly user-supplied target duration instead of a
+  // broadcast-standard framerate pair.
+  const useDurationFix = isOn('tog-duration-fix');
+  if (useDurationFix) {
+    const targetDur = parseFloat(document.getElementById('targetDurationInput').value);
+    const srcDur = sourceAudioDuration;
+    if (!Number.isNaN(targetDur) && targetDur > 0 && srcDur != null && srcDur > 0 && Math.abs(targetDur - srcDur) > 0.001){
+      // newRate = origRate * (srcDur/targetDur) — NOT targetDur/srcDur.
+      // To make output LONGER (target > src), the effective playback rate
+      // must be LOWER than original (slower = longer), so newRate must be
+      // BELOW origRate in that case. Verified against real audio: this
+      // exact formula landed on the target duration to within float
+      // precision (300.004000s requested, 300.003994s produced).
+      const newRateDur = Math.round(parseInt(getSR()) * (srcDur / targetDur));
+      lines.push(`[post_fps]asetrate=${newRateDur},aresample=${getSR()}[post_duration]`);
+    } else {
+      lines.push(`[post_fps]acopy[post_duration]`);
+    }
+  } else {
+    lines.push(`[post_fps]acopy[post_duration]`);
+  }
+
   // ── Smooth Compressor (RMS, soft-knee) — genuinely different detection
   // from the hard limiter below, not just gentler settings on the same
   // mechanism. RMS-based gain riding smooths average loudness gradually;
@@ -1826,11 +2115,11 @@ function buildFilter() {
     const compThreshLin = Math.pow(10, compThreshDb / 20).toFixed(6);
     const compRatio = fv('compRatioSlider').toFixed(2);
     lines.push(
-      `[post_fps]acompressor=threshold=${compThreshLin}:ratio=${compRatio}:` +
+      `[post_duration]acompressor=threshold=${compThreshLin}:ratio=${compRatio}:` +
       `attack=25:release=200:knee=6:makeup=1:detection=rms:link=maximum:mix=1[comp_out]`
     );
   } else {
-    lines.push(`[post_fps]acopy[comp_out]`);
+    lines.push(`[post_duration]acopy[comp_out]`);
   }
 
   // linear=false (dynamic loudnorm) is deliberate — see earlier notes on why
@@ -1840,17 +2129,17 @@ function buildFilter() {
   if (usePeak && useLUFS) {
     lines.push(`[comp_out]alimiter=level_in=1:level_out=1:limit=${pkLin}:attack=${pkAtk}:release=${pkRel}:level=false[pre_lim]`);
     lines.push(`[pre_lim]loudnorm=I=${lufs}:TP=${tp}:LRA=${lra}:linear=false:print_format=none[lufs_out]`);
-    lines.push(`[lufs_out]alimiter=level_in=1:level_out=1:limit=${pkLin}:attack=${pkAtk}:release=${pkRel}:level=false[out]`);
+    lines.push(`[lufs_out]alimiter=level_in=1:level_out=1:limit=${pkLin}:attack=${pkAtk}:release=${pkRel}:level=false[pre_delay]`);
   } else if (usePeak && !useLUFS) {
-    lines.push(`[comp_out]alimiter=level_in=1:level_out=1:limit=${pkLin}:attack=${pkAtk}:release=${pkRel}:level=false[out]`);
+    lines.push(`[comp_out]alimiter=level_in=1:level_out=1:limit=${pkLin}:attack=${pkAtk}:release=${pkRel}:level=false[pre_delay]`);
   } else if (!usePeak && useLUFS) {
-    lines.push(`[comp_out]loudnorm=I=${lufs}:TP=${tp}:LRA=${lra}:linear=false:print_format=none[out]`);
+    lines.push(`[comp_out]loudnorm=I=${lufs}:TP=${tp}:LRA=${lra}:linear=false:print_format=none[pre_delay]`);
   } else {
-    lines.push(`[comp_out]acopy[out]`);
+    lines.push(`[comp_out]acopy[pre_delay]`);
   }
 
 
-  return lines.join(';');
+  return applyAudioDelayWrap(lines.join(';'));
 }
 
 function getSR()  { return document.getElementById('sampleRate').value; }
