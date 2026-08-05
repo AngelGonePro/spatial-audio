@@ -184,7 +184,8 @@
   #stxt.done{color:var(--green);}
   #stxt.error{color:#ff4444;}
   .prog-wrap{margin-top:7px;height:3px;background:var(--border);border-radius:2px;overflow:hidden;display:none;}
-  .prog-fill{height:100%;width:40%;background:linear-gradient(90deg,var(--accent),var(--green));border-radius:2px;animation:slide 1.2s linear infinite;}
+  .prog-fill{height:100%;width:0%;background:linear-gradient(90deg,var(--accent),var(--green));border-radius:2px;transition:width .2s linear;}
+  .prog-stats{display:none;justify-content:space-between;margin-top:6px;font-size:.78rem;color:var(--muted);}
   @keyframes slide{0%{transform:translateX(-200%);}100%{transform:translateX(350%);}}
 
   #output{margin-top:12px;background:#040609;border:1px solid var(--border);border-radius:8px;padding:13px 15px;font-size:.68rem;color:var(--green);white-space:pre-wrap;word-break:break-all;max-height:240px;overflow-y:auto;display:none;line-height:1.65;}
@@ -771,7 +772,12 @@
     <div class="sdot idle" id="sdot"></div>
     <span id="stxt">Idle — load a 7.1 file to begin</span>
   </div>
-  <div class="prog-wrap" id="progWrap"><div class="prog-fill"></div></div>
+  <div class="prog-wrap" id="progWrap"><div class="prog-fill" id="progFill"></div></div>
+  <div class="prog-stats" id="progStats">
+    <span id="progPercent">0%</span>
+    <span id="progSpeed"></span>
+    <span id="progEta">ETA: —</span>
+  </div>
   <pre id="output"></pre>
 
   <hr>
@@ -2245,12 +2251,47 @@ async function run() {
 
   setStatus('Processing — please wait…', 'running');
   document.getElementById('progWrap').style.display = 'block';
+  document.getElementById('progStats').style.display = 'flex';
+  document.getElementById('progFill').style.width = '0%';
+  document.getElementById('progPercent').textContent = '0%';
+  document.getElementById('progSpeed').textContent = '';
+  document.getElementById('progEta').textContent = 'ETA: —';
   document.getElementById('runBtn').disabled = true;
 
-  if (window.electronAPI?.runFFmpeg) {
-    const res = await window.electronAPI.runFFmpeg({ ffmpeg, args });
+  function hideProgress(){
     document.getElementById('progWrap').style.display = 'none';
+    document.getElementById('progStats').style.display = 'none';
     document.getElementById('runBtn').disabled = false;
+  }
+
+  if (window.electronAPI?.runFFmpegWithProgress && sourceAudioDuration > 0) {
+    window.electronAPI.onFFmpegProgress((data) => {
+      document.getElementById('progFill').style.width = data.percent + '%';
+      document.getElementById('progPercent').textContent = data.percent.toFixed(1) + '%';
+      document.getElementById('progSpeed').textContent = data.speed ? data.speed.toFixed(2) + 'x speed' : '';
+      if (data.etaSec != null && !data.done){
+        const m = Math.floor(data.etaSec / 60);
+        const s = Math.round(data.etaSec % 60);
+        document.getElementById('progEta').textContent = `ETA: ${m}m ${s}s`;
+      } else if (data.done){
+        document.getElementById('progEta').textContent = 'Done';
+      }
+    });
+    const res = await window.electronAPI.runFFmpegWithProgress({ ffmpeg, args, totalDuration: sourceAudioDuration });
+    hideProgress();
+    if (res.code !== 0) {
+      setStatus('❌ Failed — check log', 'error');
+      log.textContent += '\n\n# STDERR:\n' + res.stderr;
+    } else {
+      setStatus('✅ Conversion complete', 'done');
+      log.textContent += '\n\n# Output:\n' + outPath;
+    }
+  } else if (window.electronAPI?.runFFmpeg) {
+    // No known source duration to compute percent/ETA against — falls
+    // back to the plain run with no progress reporting rather than
+    // showing a bar that can never actually move.
+    const res = await window.electronAPI.runFFmpeg({ ffmpeg, args });
+    hideProgress();
     if (res.code !== 0) {
       setStatus('❌ Failed — check log', 'error');
       log.textContent += '\n\n# STDERR:\n' + res.stderr;
@@ -2259,8 +2300,7 @@ async function run() {
       log.textContent += '\n\n# Output:\n' + outPath;
     }
   } else {
-    document.getElementById('progWrap').style.display = 'none';
-    document.getElementById('runBtn').disabled = false;
+    hideProgress();
     setStatus('ℹ Preview mode — copy command to terminal', '');
     log.textContent += '\n\n# No Electron IPC detected. Run the command above manually.\n# Expected output: ' + outPath;
   }
