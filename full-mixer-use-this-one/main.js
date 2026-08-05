@@ -17,7 +17,6 @@ function createWindow() {
   });
 
   win.loadFile('index.html');
-  win.webContents.openDevTools();
 }
 
 // Windows' spawn() has a real, fairly low effective command-line length
@@ -225,6 +224,81 @@ ipcMain.handle('run-ffmpeg', async (event, payload) => {
     proc.on("error", err => {
       cleanup();
       resolve({ code: -1, stdout, stderr: stderr + '\n' + err.message });
+    });
+  });
+});
+
+// Same as run-ffmpeg above, but parses ffmpeg's own -progress pipe:1
+// output (a machine-readable key=value stream, separate from its normal
+// stderr logging) to compute and emit real percent/speed/ETA as encoding
+// actually happens — ported from the SDR->HDR project's validated
+// implementation. Simplified from that version: no jobId/activeProcesses
+// tracking, since this tool runs one file at a time with no queue or
+// cancel button to wire that into.
+ipcMain.handle('run-ffmpeg-with-progress', async (event, payload) => {
+  return new Promise((resolve) => {
+    const ffmpeg = payload.ffmpeg;
+    const totalDuration = payload.totalDuration || 0;
+    const { args, tempPaths } = routeArgsThroughTempFiles(payload.args);
+
+    const progressArgs = ['-progress', 'pipe:1', ...args];
+
+    let proc;
+    try {
+      proc = spawn(ffmpeg, progressArgs, { windowsHide: true });
+    } catch (err) {
+      for (const p of tempPaths) fs.unlink(p, () => {});
+      resolve({ code: -1, stdout: "", stderr: String(err && err.message || err) });
+      return;
+    }
+
+    let stdoutBuf = "";
+    let stderr = "";
+    let lastSentPercent = -1;
+
+    proc.stdout.on("data", d => {
+      stdoutBuf += d.toString();
+      const lines = stdoutBuf.split('\n');
+      stdoutBuf = lines.pop(); // keep any incomplete trailing line for next chunk
+      let currentUpdate = {};
+      for (const line of lines) {
+        const [key, value] = line.split('=');
+        if (!key) continue;
+        currentUpdate[key.trim()] = (value || '').trim();
+        if (key.trim() === 'progress') {
+          const isDone = currentUpdate.progress === 'end';
+          if (isDone) {
+            event.sender.send('ffmpeg-progress', {
+              percent: 100, currentSec: totalDuration, totalDuration, speed: 0, etaSec: 0, done: true
+            });
+          } else if (totalDuration > 0 && currentUpdate.out_time_ms && currentUpdate.out_time_ms !== 'N/A') {
+            const currentSec = Math.max(0, parseInt(currentUpdate.out_time_ms) / 1000000);
+            const percent = Math.max(0, Math.min(100, (currentSec / totalDuration) * 100));
+            const speed = parseFloat((currentUpdate.speed || '0x').replace('x', '')) || 0;
+            const etaSec = speed > 0 ? (totalDuration - currentSec) / speed : null;
+            const roundedPercent = Math.round(percent * 10) / 10;
+            if (!Number.isNaN(roundedPercent) && roundedPercent !== lastSentPercent) {
+              lastSentPercent = roundedPercent;
+              event.sender.send('ffmpeg-progress', {
+                percent: roundedPercent,
+                currentSec, totalDuration, speed, etaSec,
+                done: false
+              });
+            }
+          }
+          currentUpdate = {};
+        }
+      }
+    });
+    proc.stderr.on("data", d => stderr += d.toString());
+
+    proc.on("close", code => {
+      for (const p of tempPaths) fs.unlink(p, () => {});
+      resolve({ code, stdout: "", stderr });
+    });
+    proc.on("error", err => {
+      for (const p of tempPaths) fs.unlink(p, () => {});
+      resolve({ code: -1, stdout: "", stderr: String(err.message) });
     });
   });
 });
